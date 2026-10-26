@@ -1,0 +1,56 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    // Settings: country, services, onboarding state.
+    match /users/{userId} {
+      allow read, delete: if isOwner(userId);
+      allow create, update: if isOwner(userId)
+        && request.resource.data.keys().hasOnly([
+          'country', 'serviceIds', 'includeFreeWithAds', 'createdAt', 'onboardedAt', 'updatedAt'
+        ])
+        && (!('country' in request.resource.data) || request.resource.data.country is string)
+        && (!('serviceIds' in request.resource.data) || request.resource.data.serviceIds is list);
+
+      // One document per title, id "movie_123" or "tv_456".
+      match /library/{titleId} {
+        allow read, delete: if isOwner(userId);
+        allow create, update: if isOwner(userId)
+          && titleId == request.resource.data.type + '_' + string(request.resource.data.tmdbId)
+          && request.resource.data.type in ['movie', 'tv']
+          && request.resource.data.tmdbId is int
+          && request.resource.data.title is string
+          && request.resource.data.onWatchlist is bool
+          && request.resource.data.favorite is bool
+          && request.resource.data.watches is list
+          && request.resource.data.watches.size() <= 500;
+      }
+
+      // Implicit taste signals from Discover; expired by a TTL policy.
+      match /signals/{signalId} {
+        allow read, delete: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && request.resource.data.keys().hasOnly(['type', 'tmdbId', 'signal', 'at', 'expireAt'])
+          && request.resource.data.type in ['movie', 'tv']
+          && request.resource.data.tmdbId is int
+          && request.resource.data.signal is string;
+      }
+    }
+
+    // Written by Cloud Functions only.
+    match /availabilityCache/{doc} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // Hand-picked clip start times, edited in the console.
+    match /clipOverrides/{doc} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+  }
+}
