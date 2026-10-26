@@ -12,6 +12,7 @@ import 'package:reel/domain/usecases/build_title_share.dart';
 import 'package:reel/domain/usecases/pick_video.dart';
 import 'package:reel/presentation/providers/providers.dart';
 import 'package:reel/presentation/widgets/async_states.dart';
+import 'package:reel/presentation/widgets/inline_youtube_view.dart';
 import 'package:reel/presentation/widgets/library_actions.dart';
 import 'package:reel/presentation/widgets/log_watch_sheet.dart';
 import 'package:reel/presentation/widgets/poster_image.dart';
@@ -279,7 +280,9 @@ class _TrailerState extends ConsumerState<_Trailer> {
     if (video != null && ref.read(videoEmbedsEnabledProvider)) {
       _controller = YoutubePlayerController.fromVideoId(
         videoId: video.key,
-        params: const YoutubePlayerParams(showFullscreenButton: true, playsInline: true),
+        // Not inline: on iOS the trailer opens in the system player, which is
+        // full screen.
+        params: const YoutubePlayerParams(showFullscreenButton: true, playsInline: false),
       );
     }
   }
@@ -298,7 +301,10 @@ class _TrailerState extends ConsumerState<_Trailer> {
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
-        child: YoutubePlayer(controller: controller, aspectRatio: 16 / 9),
+        child: AspectRatio(
+          aspectRatio: 16 / 9,
+          child: InlineYoutubeView(controller: controller),
+        ),
       ),
     );
   }

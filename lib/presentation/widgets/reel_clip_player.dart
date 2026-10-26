@@ -10,6 +10,7 @@ import 'package:reel/domain/entities/media_type.dart';
 import 'package:reel/domain/entities/video.dart';
 import 'package:reel/domain/usecases/pick_clip.dart';
 import 'package:reel/presentation/providers/providers.dart';
+import 'package:reel/presentation/widgets/inline_youtube_view.dart';
 import 'package:reel/presentation/widgets/poster_image.dart';
 
 final clipOverrideRepositoryProvider = Provider<ClipOverrideRepository?>((ref) {
@@ -32,7 +33,8 @@ final clipOverrideProvider = FutureProvider.autoDispose.family<ClipOverride?, Ti
 /// looping. Only a [live] card gets a player; the rest show a still. When
 /// no video plays, a slow pan over the backdrop stands in.
 ///
-/// Nothing is drawn over the player: YouTube's terms forbid covering it.
+/// Nothing is drawn over the player: YouTube's terms forbid covering it. It
+/// takes no touches, so a swipe on the clip moves the feed.
 class ReelClipPlayer extends ConsumerStatefulWidget {
   final MediaTitle title;
   final bool live;
@@ -183,7 +185,7 @@ class _ReelClipPlayerState extends ConsumerState<ReelClipPlayer> {
       child: AspectRatio(
         aspectRatio: 16 / 9,
         child: controller != null && !_failed
-            ? YoutubePlayer(controller: controller, aspectRatio: 16 / 9)
+            ? InlineYoutubeView(controller: controller, interactive: false)
             : _Still(
                 title: widget.title,
                 // No pan without a web view (widget tests) or with reduced
