@@ -10,6 +10,7 @@ import 'package:reel/presentation/providers/providers.dart';
 import 'package:reel/presentation/widgets/async_states.dart';
 import 'package:reel/presentation/widgets/library_actions.dart';
 import 'package:reel/presentation/widgets/poster_image.dart';
+import 'package:reel/presentation/widgets/service_logo.dart';
 import 'package:reel/presentation/widgets/title_tile.dart';
 
 /// Your watchlist, what you've watched, and your favorites.
@@ -91,14 +92,65 @@ class LibraryScreen extends ConsumerWidget {
   }
 }
 
-/// Whether a title streams on your services right now; null until
-/// availability exists, which turns the filter off.
-final playableOnMyServicesProvider = Provider<bool Function(TitleId id)?>((ref) => null);
+/// Whether a watchlist title streams on your services right now. Titles
+/// whose availability hasn't loaded count as not playable.
+final playableOnMyServicesProvider = Provider<bool Function(TitleId id)>((ref) {
+  final settings = ref.watch(settingsProvider).value;
+  final availability = ref.watch(watchlistAvailabilityProvider).value ?? const {};
+  return (id) =>
+      settings != null &&
+      (availability[id]?.isPlayableOn(settings.serviceIds, includeFree: settings.includeFreeWithAds) ?? false);
+});
 
-/// Banners above the library list, such as how much of the watchlist you can
-/// stream now.
-List<Widget> libraryBanners(BuildContext context, WidgetRef ref, LibraryQuery query, List<LibraryEntry> entries) =>
-    const [];
+/// "7 of your watchlist are on your services", or a nudge to pick services.
+List<Widget> libraryBanners(BuildContext context, WidgetRef ref, LibraryQuery query, List<LibraryEntry> entries) {
+  if (query.segment != LibrarySegment.watchlist || entries.isEmpty) return const [];
+  final settings = ref.watch(settingsProvider).value;
+  if (settings == null) return const [];
+  final scheme = Theme.of(context).colorScheme;
+  if (settings.serviceIds.isEmpty && !settings.includeFreeWithAds) {
+    return [
+      ListTile(
+        dense: true,
+        leading: const Icon(Icons.live_tv),
+        title: const Text('Pick your services to see what you can watch now'),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => context.push('/you/services'),
+      ),
+    ];
+  }
+  final playable = ref.watch(playableOnMyServicesProvider);
+  final count = entries.where((e) => playable(e.id)).length;
+  if (count == 0) return const [];
+  return [
+    Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: Material(
+        color: scheme.secondaryContainer,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => ref.read(libraryViewProvider.notifier).update((q) => q.copyWith(onMyServicesOnly: true)),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              children: [
+                Icon(Icons.play_circle, color: scheme.onSecondaryContainer),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    '$count of your watchlist ${count == 1 ? 'is' : 'are'} on your services',
+                    style: TextStyle(color: scheme.onSecondaryContainer),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ),
+  ];
+}
 
 class _Filters extends ConsumerWidget {
   final LibraryQuery query;
@@ -109,7 +161,7 @@ class _Filters extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final view = ref.read(libraryViewProvider.notifier);
-    final canFilterByService = ref.watch(playableOnMyServicesProvider) != null;
+    final canFilterByService = query.segment == LibrarySegment.watchlist;
     return SizedBox(
       height: 44,
       child: ListView(
@@ -249,7 +301,7 @@ class _List extends ConsumerWidget {
           },
           child: TitleTile(
             title: entry.snapshot,
-            subtitle: _EntrySummary(entry: entry),
+            subtitle: segment == LibrarySegment.watchlist ? _PlayableOn(entry: entry) : _EntrySummary(entry: entry),
           ),
         );
       },
@@ -271,6 +323,21 @@ class _EntrySummary extends StatelessWidget {
     ];
     if (parts.isEmpty) return const SizedBox.shrink();
     return Text(parts.join(' · '), style: Theme.of(context).textTheme.labelSmall);
+  }
+}
+
+class _PlayableOn extends ConsumerWidget {
+  final LibraryEntry entry;
+
+  const _PlayableOn({required this.entry});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(settingsProvider).value;
+    final availability = ref.watch(watchlistAvailabilityProvider.select((a) => a.value?[entry.id]));
+    if (settings == null || availability == null) return const SizedBox.shrink();
+    final offers = availability.playableOn(settings.serviceIds, includeFree: settings.includeFreeWithAds);
+    return ServiceLogoRow(offers: offers);
   }
 }
 

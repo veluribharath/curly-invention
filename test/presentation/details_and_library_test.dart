@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:reel/data/repositories/mock_catalog_repository.dart';
+import 'package:reel/domain/entities/library_entry.dart';
 import 'package:reel/domain/entities/media_type.dart';
 import 'package:reel/main.dart';
 
@@ -63,5 +65,42 @@ void main() {
     expect(entry.watches.single.watchedAt.day, fixedNow.day);
     expect(entry.latestRating?.name, 'loved');
     expect(find.textContaining('Watched'), findsWidgets);
+  });
+
+  testWidgets('details show where to watch with your services highlighted', (tester) async {
+    await pumpApp(tester);
+    await tapTab(tester, 'Search');
+    await tester.enterText(find.byType(SearchBar), 'stranger');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Stranger Things').last);
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(find.text('Where to watch'), 200, scrollable: find.byType(Scrollable).first);
+    expect(find.text('Stream'), findsOneWidget);
+    expect(find.byTooltip('On your services'), findsOneWidget);
+    expect(find.textContaining('JustWatch'), findsOneWidget);
+  });
+
+  testWidgets('the watchlist counts what streams on your services', (tester) async {
+    final repo = MemoryLibraryRepository();
+    final now = fixedNow;
+    for (final id in [const TitleId.tv(1396), const TitleId.movie(238)]) {
+      await repo.save(LibraryEntry.empty(MockCatalog.byId(id)!, now: now).copyWith(onWatchlist: true));
+    }
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: testOverrides(library: repo),
+        child: const ReelApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tapTab(tester, 'Library');
+
+    expect(find.text('1 of your watchlist is on your services'), findsOneWidget);
+    await tester.tap(find.text('1 of your watchlist is on your services'));
+    await tester.pumpAndSettle();
+    expect(find.text('Breaking Bad'), findsWidgets);
+    expect(find.text('The Godfather'), findsNothing);
   });
 }

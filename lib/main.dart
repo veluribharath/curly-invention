@@ -2,7 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import 'package:reel/core/config/app_config.dart';
 import 'package:reel/core/theme/app_theme.dart';
@@ -31,31 +30,18 @@ Future<bool> _initFirebase() async {
   }
 }
 
-class ReelApp extends StatefulWidget {
+class ReelApp extends ConsumerWidget {
   const ReelApp({super.key});
 
   @override
-  State<ReelApp> createState() => _ReelAppState();
-}
-
-class _ReelAppState extends State<ReelApp> {
-  late final GoRouter _router = buildRouter();
-
-  @override
-  void dispose() {
-    _router.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp.router(
       title: 'Reel',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
       themeMode: ThemeMode.dark,
-      routerConfig: _router,
+      routerConfig: ref.watch(routerProvider),
     );
   }
 }

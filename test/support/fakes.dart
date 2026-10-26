@@ -1,10 +1,13 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/misc.dart';
+import 'package:reel/data/repositories/availability_repositories.dart';
 import 'package:reel/data/repositories/mock_catalog_repository.dart';
 import 'package:reel/domain/entities/library_entry.dart';
 import 'package:reel/domain/entities/media_type.dart';
+import 'package:reel/domain/entities/user_settings.dart';
 import 'package:reel/domain/repositories/library_repository.dart';
+import 'package:reel/domain/repositories/settings_repository.dart';
 import 'package:reel/presentation/providers/providers.dart';
 
 /// A library kept in memory.
@@ -41,12 +44,42 @@ class MemoryLibraryRepository implements LibraryRepository {
   }
 }
 
+/// Settings kept in memory.
+class MemorySettingsRepository implements SettingsRepository {
+  UserSettings? settings;
+  final _changes = StreamController<UserSettings>.broadcast();
+
+  MemorySettingsRepository([this.settings]);
+
+  @override
+  Stream<UserSettings> watchSettings({required UserSettings fallback}) async* {
+    yield settings ?? fallback;
+    yield* _changes.stream;
+  }
+
+  @override
+  Future<void> save(UserSettings settings) async {
+    this.settings = settings;
+    _changes.add(settings);
+  }
+
+  @override
+  Future<void> clear() async => settings = null;
+}
+
 final fixedNow = DateTime(2026, 10, 26, 20);
 
+/// Onboarded in the US with Netflix and Max.
+UserSettings onboardedSettings() =>
+    UserSettings(country: 'US', serviceIds: const {8, 1899}, onboardedAt: DateTime(2026, 10, 1));
+
 /// Overrides for running screens on mock data with an in-memory library.
-List<Override> testOverrides({MemoryLibraryRepository? library, DateTime? now}) {
+List<Override> testOverrides({MemoryLibraryRepository? library, MemorySettingsRepository? settings, DateTime? now}) {
   final repo = library ?? MemoryLibraryRepository();
   return [
+    settingsRepositoryProvider.overrideWithValue(settings ?? MemorySettingsRepository(onboardedSettings())),
+    availabilityRepositoryProvider.overrideWithValue(const MockAvailabilityRepository()),
+    deviceCountryProvider.overrideWithValue('US'),
     catalogRepositoryProvider.overrideWithValue(const MockCatalogRepository()),
     libraryRepositoryProvider.overrideWithValue(repo),
     clockProvider.overrideWithValue(() => now ?? fixedNow),

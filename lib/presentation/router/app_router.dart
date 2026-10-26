@@ -1,22 +1,57 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:reel/domain/entities/media_title.dart';
 import 'package:reel/domain/entities/media_type.dart';
+import 'package:reel/presentation/providers/providers.dart';
 import 'package:reel/presentation/screens/home_shell.dart';
 import 'package:reel/presentation/screens/library_screen.dart';
+import 'package:reel/presentation/screens/onboarding_screen.dart';
 import 'package:reel/presentation/screens/person_screen.dart';
 import 'package:reel/presentation/screens/placeholder_screen.dart';
 import 'package:reel/presentation/screens/reels_spike_screen.dart';
 import 'package:reel/presentation/screens/search_screen.dart';
+import 'package:reel/presentation/screens/services_screen.dart';
 import 'package:reel/presentation/screens/title_details_screen.dart';
+import 'package:reel/presentation/screens/you_screen.dart';
 
-GoRouter buildRouter() {
+/// The app's router. First run goes to onboarding until it's finished.
+final routerProvider = Provider<GoRouter>((ref) {
+  final refresh = ValueNotifier(0);
+  ref.listen(settingsProvider, (_, _) => refresh.value++);
+  final router = buildRouter(refresh: refresh, onboarded: () => ref.read(settingsProvider).value?.onboarded);
+  ref.onDispose(() {
+    router.dispose();
+    refresh.dispose();
+  });
+  return router;
+});
+
+/// [onboarded] is null while settings load.
+GoRouter buildRouter({required Listenable refresh, required bool? Function() onboarded}) {
   final rootKey = GlobalKey<NavigatorState>();
   return GoRouter(
     navigatorKey: rootKey,
     initialLocation: '/discover',
+    refreshListenable: refresh,
+    redirect: (context, state) {
+      final done = onboarded();
+      final path = state.matchedLocation;
+      if (done == null) {
+        return path == '/loading' ? null : '/loading?from=${Uri.encodeQueryComponent(state.uri.toString())}';
+      }
+      if (!done) return path == '/onboarding' ? null : '/onboarding';
+      if (path == '/onboarding') return '/discover';
+      if (path == '/loading') return state.uri.queryParameters['from'] ?? '/discover';
+      return null;
+    },
     routes: [
+      GoRoute(
+        path: '/loading',
+        builder: (context, state) => const Scaffold(body: Center(child: CircularProgressIndicator())),
+      ),
+      GoRoute(path: '/onboarding', builder: (context, state) => const OnboardingScreen()),
       StatefulShellRoute.indexedStack(
         builder: (context, state, shell) => HomeShell(shell: shell),
         branches: [
@@ -39,11 +74,11 @@ GoRouter buildRouter() {
             routes: [
               GoRoute(
                 path: '/you',
-                builder: (context, state) => PlaceholderScreen(
-                  title: 'You',
-                  icon: Icons.person_outline,
-                  action: OutlinedButton(onPressed: () => context.push('/spike'), child: const Text('Reels spike')),
-                ),
+                builder: (context, state) => const YouScreen(),
+                routes: [
+                  GoRoute(path: 'services', builder: (context, state) => const ServicesScreen()),
+                  GoRoute(path: 'country', builder: (context, state) => const ServicesScreen(country: true)),
+                ],
               ),
             ],
           ),

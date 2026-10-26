@@ -16,6 +16,7 @@ import 'package:reel/presentation/widgets/library_actions.dart';
 import 'package:reel/presentation/widgets/log_watch_sheet.dart';
 import 'package:reel/presentation/widgets/poster_image.dart';
 import 'package:reel/presentation/widgets/title_meta.dart';
+import 'package:reel/presentation/widgets/where_to_watch.dart';
 
 /// Everything about one movie or series, and what you've done with it.
 class TitleDetailsScreen extends ConsumerWidget {
@@ -95,7 +96,7 @@ class TitleDetailsScreen extends ConsumerWidget {
               SliverToBoxAdapter(
                 child: Padding(padding: const EdgeInsets.fromLTRB(16, 16, 16, 0), child: Text(full.overview)),
               ),
-            ...whereToWatchSlivers(full),
+            SliverToBoxAdapter(child: WhereToWatch(title: full)),
             SliverToBoxAdapter(child: _People(title: full)),
           ],
           SliverToBoxAdapter(child: _MoreLikeThis(id: id)),
@@ -118,9 +119,6 @@ class TitleDetailsScreen extends ConsumerWidget {
     );
   }
 }
-
-/// Where-to-watch sections; filled in once availability exists.
-List<Widget> whereToWatchSlivers(MediaTitle title) => const [];
 
 class _Header extends StatelessWidget {
   final MediaTitle title;

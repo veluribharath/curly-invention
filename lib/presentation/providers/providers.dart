@@ -1,17 +1,26 @@
+import 'dart:async';
+import 'dart:ui' show PlatformDispatcher;
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:reel/core/config/app_config.dart';
+import 'package:reel/data/repositories/availability_repositories.dart';
 import 'package:reel/data/repositories/firestore_library_repository.dart';
 import 'package:reel/data/repositories/local_library_repository.dart';
 import 'package:reel/data/repositories/mock_catalog_repository.dart';
+import 'package:reel/data/repositories/settings_repositories.dart';
 import 'package:reel/data/repositories/tmdb_catalog_repository.dart';
 import 'package:reel/data/services/auth_service.dart';
 import 'package:reel/data/services/tmdb_client.dart';
 import 'package:reel/domain/entities/library_entry.dart';
 import 'package:reel/domain/entities/media_title.dart';
 import 'package:reel/domain/entities/media_type.dart';
+import 'package:reel/domain/entities/streaming.dart';
+import 'package:reel/domain/entities/user_settings.dart';
 import 'package:reel/domain/repositories/catalog_repository.dart';
+import 'package:reel/domain/repositories/availability_repository.dart';
 import 'package:reel/domain/repositories/library_repository.dart';
+import 'package:reel/domain/repositories/settings_repository.dart';
 
 /// Whether YouTube players can be created. Off in widget tests, where there
 /// is no web view; screens show the video's thumbnail instead.
@@ -151,4 +160,122 @@ final trendingProvider = FutureProvider.autoDispose<List<MediaTitle>>((ref) asyn
 final searchResultsProvider = FutureProvider.autoDispose.family<List<MediaTitle>, String>((ref, query) async {
   if (query.trim().isEmpty) return const [];
   return (await ref.watch(catalogRepositoryProvider).search(query)).titles;
+});
+
+// ---------------------------------------------------------------------------
+// Settings and availability
+
+/// The device's country, for settings before any are saved.
+final deviceCountryProvider = Provider<String>((ref) {
+  final code = PlatformDispatcher.instance.locale.countryCode;
+  return code == null || code.length != 2 ? 'US' : code.toUpperCase();
+});
+
+/// Firestore for the signed-in account, the device otherwise. Null while
+/// signing in.
+final settingsRepositoryProvider = Provider<SettingsRepository?>((ref) {
+  if (!ref.watch(firebaseEnabledProvider)) return LocalSettingsRepository();
+  final uid = ref.watch(authUidProvider).value;
+  return uid == null ? null : FirestoreSettingsRepository(uid: uid);
+});
+
+final settingsProvider = StreamProvider<UserSettings>((ref) {
+  final repo = ref.watch(settingsRepositoryProvider);
+  if (repo == null) return const Stream.empty();
+  return repo.watchSettings(fallback: UserSettings(country: ref.watch(deviceCountryProvider)));
+});
+
+final settingsActionsProvider = Provider<SettingsActions>((ref) => SettingsActions(ref));
+
+class SettingsActions {
+  final Ref _ref;
+
+  SettingsActions(this._ref);
+
+  UserSettings get _current =>
+      _ref.read(settingsProvider).value ?? UserSettings(country: _ref.read(deviceCountryProvider));
+
+  Future<void> _save(UserSettings settings) async {
+    final repo = _ref.read(settingsRepositoryProvider);
+    if (repo == null) throw StateError('Still signing in');
+    await repo.save(settings);
+  }
+
+  /// Changing country keeps only the services it also has, which the
+  /// caller passes in [keepServices]; otherwise services stay as they are.
+  Future<void> setCountry(String country, {Set<int>? keepServices}) => _save(
+    UserSettings(
+      country: country,
+      serviceIds: keepServices ?? _current.serviceIds,
+      includeFreeWithAds: _current.includeFreeWithAds,
+      onboardedAt: _current.onboardedAt,
+    ),
+  );
+
+  Future<void> setServices(Set<int> serviceIds) => _save(_current.copyWith(serviceIds: serviceIds));
+
+  Future<void> setIncludeFree(bool include) => _save(_current.copyWith(includeFreeWithAds: include));
+
+  Future<void> finishOnboarding() => _save(_current.copyWith(onboardedAt: _ref.read(clockProvider)()));
+}
+
+final availabilityRepositoryProvider = Provider<AvailabilityRepository>((ref) {
+  if (AppConfig.hasTmdbKey) {
+    return TmdbAvailabilityRepository(TmdbClient(apiKey: AppConfig.tmdbApiKey));
+  }
+  return const MockAvailabilityRepository();
+});
+
+/// Where a title streams in your country. Kept for the session: TMDB
+/// refreshes this data about daily.
+final availabilityProvider = FutureProvider.family<Availability, TitleId>((ref, id) async {
+  final country = await ref.watch(settingsProvider.selectAsync((s) => s.country));
+  return ref.watch(availabilityRepositoryProvider).forTitle(id, country);
+});
+
+/// Offers you can start now on your services, best first; empty while
+/// loading or when there are none.
+final playableOffersProvider = Provider.family<List<Offer>, TitleId>((ref, id) {
+  final settings = ref.watch(settingsProvider).value;
+  final availability = ref.watch(availabilityProvider(id)).value;
+  if (settings == null || availability == null) return const [];
+  return availability.playableOn(settings.serviceIds, includeFree: settings.includeFreeWithAds);
+});
+
+/// Services available in your country, most popular first.
+final countryServicesProvider = FutureProvider.family<List<StreamingService>, String>((ref, country) {
+  return ref.watch(catalogRepositoryProvider).services(country);
+});
+
+final regionsProvider = FutureProvider<Map<String, String>>((ref) {
+  return ref.watch(catalogRepositoryProvider).regions();
+});
+
+/// Availability of each watchlist title, fetched a few at a time, as it
+/// arrives.
+final watchlistAvailabilityProvider = StreamProvider<Map<TitleId, Availability>>((ref) async* {
+  final ids = ref.watch(
+    libraryProvider.select(
+      (library) => [
+        for (final entry in library.value?.values ?? const <LibraryEntry>[])
+          if (entry.onWatchlist) entry.id,
+      ]..sort(),
+    ),
+  );
+  // Refetch when the country changes.
+  ref.watch(settingsProvider.select((s) => s.value?.country));
+  final results = <TitleId, Availability>{};
+  yield const {};
+  const batchSize = 6;
+  for (var i = 0; i < ids.length; i += batchSize) {
+    final batch = ids.skip(i).take(batchSize);
+    final fetched = await Future.wait([
+      for (final id in batch)
+        ref.read(availabilityProvider(id).future).then<Availability?>((a) => a).catchError((Object _) => null),
+    ]);
+    for (final availability in fetched) {
+      if (availability != null) results[availability.id] = availability;
+    }
+    yield Map.unmodifiable(results);
+  }
 });
