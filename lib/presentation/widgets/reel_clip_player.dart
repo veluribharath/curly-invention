@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 
+import 'package:reel/data/repositories/clip_override_repository.dart';
 import 'package:reel/domain/entities/media_title.dart';
 import 'package:reel/domain/entities/media_type.dart';
 import 'package:reel/domain/entities/video.dart';
@@ -11,8 +12,21 @@ import 'package:reel/domain/usecases/pick_clip.dart';
 import 'package:reel/presentation/providers/providers.dart';
 import 'package:reel/presentation/widgets/poster_image.dart';
 
-/// A hand-picked start time for a title, if there is one.
-final clipOverrideProvider = FutureProvider.autoDispose.family<ClipOverride?, TitleId>((ref, id) async => null);
+final clipOverrideRepositoryProvider = Provider<ClipOverrideRepository?>((ref) {
+  return ref.watch(firebaseEnabledProvider) ? ClipOverrideRepository() : null;
+});
+
+/// A hand-picked clip window for a title, if there is one. Failures count
+/// as none: the default window is fine.
+final clipOverrideProvider = FutureProvider.autoDispose.family<ClipOverride?, TitleId>((ref, id) async {
+  final repo = ref.watch(clipOverrideRepositoryProvider);
+  if (repo == null) return null;
+  try {
+    return await repo.forTitle(id);
+  } catch (_) {
+    return null;
+  }
+});
 
 /// The reel's video: a window of the title's best clip, muted by default,
 /// looping. Only a [live] card gets a player; the rest show a still. When

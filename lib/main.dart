@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:reel/core/config/app_config.dart';
 import 'package:reel/core/theme/app_theme.dart';
+import 'package:reel/presentation/providers/account_providers.dart';
 import 'package:reel/presentation/providers/providers.dart';
 import 'package:reel/presentation/router/app_router.dart';
 
@@ -40,7 +41,7 @@ class ReelApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
-      themeMode: ThemeMode.dark,
+      themeMode: ref.watch(themeModeProvider),
       routerConfig: ref.watch(routerProvider),
     );
   }
