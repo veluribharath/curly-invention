@@ -60,7 +60,8 @@ class LibraryQuery {
   final String? genre;
   final LibrarySort sort;
 
-  /// Only titles that stream on your services right now.
+  /// Only titles that stream on your services right now. Watchlist only:
+  /// the other segments don't show the filter.
   final bool onMyServicesOnly;
 
   const LibraryQuery({
@@ -98,7 +99,7 @@ bool inSegment(LibraryEntry entry, LibrarySegment segment) => switch (segment) {
 /// for ratings, A to Z for titles; ties go by title.
 ///
 /// [isPlayable] says whether a title streams on your services now; it's
-/// only asked when [LibraryQuery.onMyServicesOnly] is set.
+/// only asked when [LibraryQuery.onMyServicesOnly] is set on the watchlist.
 List<LibraryEntry> queryLibrary(
   Iterable<LibraryEntry> entries,
   LibraryQuery query, {
@@ -109,7 +110,12 @@ List<LibraryEntry> queryLibrary(
     if (!inSegment(entry, query.segment)) return false;
     if (!query.kind.matches(title.type, isDocumentary: title.isDocumentary)) return false;
     if (query.genre != null && !title.genres.contains(query.genre)) return false;
-    if (query.onMyServicesOnly && isPlayable != null && !isPlayable(entry.id)) return false;
+    if (query.onMyServicesOnly &&
+        query.segment == LibrarySegment.watchlist &&
+        isPlayable != null &&
+        !isPlayable(entry.id)) {
+      return false;
+    }
     return true;
   }).toList();
 

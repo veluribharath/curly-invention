@@ -25,16 +25,30 @@ class AuthService {
 
   AuthService({FirebaseAuth? auth}) : _auth = auth ?? FirebaseAuth.instance;
 
+  Future<UserCredential>? _signingIn;
+
   /// The signed-in user's id, signing in anonymously when nobody is.
   Stream<String?> uidChanges() async* {
     if (_auth.currentUser == null) {
-      await _auth.signInAnonymously();
+      await _signInAnonymously();
     }
     yield* _auth.authStateChanges().asyncMap((user) async {
       // Signing out leaves nobody; start a fresh anonymous account.
-      if (user == null) return (await _auth.signInAnonymously()).user?.uid;
+      if (user == null) return _auth.currentUser?.uid ?? await _signInAnonymously();
       return user.uid;
     });
+  }
+
+  /// One anonymous sign-in at a time. After a sign-out or account deletion
+  /// both the old auth stream and its replacement ask; two calls would make
+  /// two accounts and orphan one.
+  Future<String?> _signInAnonymously() async {
+    final pending = _signingIn ??= _auth.signInAnonymously();
+    try {
+      return (await pending).user?.uid;
+    } finally {
+      if (identical(_signingIn, pending)) _signingIn = null;
+    }
   }
 
   User? get currentUser => _auth.currentUser;

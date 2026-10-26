@@ -30,14 +30,22 @@ class FirestoreLibraryRepository implements LibraryRepository {
     });
   }
 
+  /// How long to wait for the server to confirm a write. Offline, its
+  /// future doesn't finish until the network is back, but the write is
+  /// already in the local cache and will sync; waiting would leave the
+  /// screen hanging with no feedback.
+  static const writeWait = Duration(seconds: 3);
+
   @override
   Future<void> save(LibraryEntry entry) {
     final doc = _library.doc(entry.id.docId);
-    return entry.isEmpty ? doc.delete() : doc.set(LibraryEntryMapper.toFirestore(entry));
+    return _written(entry.isEmpty ? doc.delete() : doc.set(LibraryEntryMapper.toFirestore(entry)));
   }
 
   @override
-  Future<void> remove(TitleId id) => _library.doc(id.docId).delete();
+  Future<void> remove(TitleId id) => _written(_library.doc(id.docId).delete());
+
+  Future<void> _written(Future<void> write) => write.timeout(writeWait, onTimeout: () {});
 
   @override
   Future<void> clear() async {
@@ -60,14 +68,22 @@ class FirestoreLibraryRepository implements LibraryRepository {
       for (final doc in existing.docs)
         if (LibraryEntryMapper.fromFirestore(doc.data()) case final entry?) doc.id: entry.updatedAt,
     };
-    final batch = _firestore.batch();
-    var writes = 0;
-    for (final entry in entries) {
+    bool isNewer(LibraryEntry entry) {
       final theirs = updatedAt[entry.id.docId];
-      if (entry.isEmpty || (theirs != null && !entry.updatedAt.isAfter(theirs))) continue;
-      batch.set(_library.doc(entry.id.docId), LibraryEntryMapper.toFirestore(entry));
-      if (++writes == 400) break;
+      return theirs == null || entry.updatedAt.isAfter(theirs);
     }
-    if (writes > 0) await batch.commit();
+
+    final newer = [
+      for (final entry in entries)
+        if (!entry.isEmpty && isNewer(entry)) entry,
+    ];
+    // Batches hold at most 500 writes.
+    for (var i = 0; i < newer.length; i += 400) {
+      final batch = _firestore.batch();
+      for (final entry in newer.skip(i).take(400)) {
+        batch.set(_library.doc(entry.id.docId), LibraryEntryMapper.toFirestore(entry));
+      }
+      await batch.commit();
+    }
   }
 }

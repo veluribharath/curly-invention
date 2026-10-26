@@ -7,6 +7,7 @@ import 'package:reel/data/repositories/firestore_library_repository.dart';
 import 'package:reel/data/services/auth_service.dart';
 import 'package:reel/presentation/providers/discover_providers.dart';
 import 'package:reel/presentation/providers/providers.dart';
+import 'package:reel/presentation/providers/recent_searches.dart';
 
 /// Light, dark or follow the system; dark until you pick.
 class ThemeModeSetting extends Notifier<ThemeMode> {
@@ -83,6 +84,7 @@ class AccountActions {
     await _ref.read(libraryRepositoryProvider)?.clear();
     await _ref.read(feedSignalRepositoryProvider)?.clear();
     await _ref.read(settingsRepositoryProvider)?.clear();
+    await _ref.read(recentSearchesProvider.notifier).clear();
     if (_ref.read(firebaseEnabledProvider)) {
       await _ref.read(authServiceProvider).deleteAccount();
       _ref.invalidate(authUidProvider);

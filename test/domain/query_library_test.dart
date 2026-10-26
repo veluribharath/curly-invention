@@ -67,6 +67,11 @@ void main() {
     ]);
   });
 
+  test('the service filter, which only the watchlist shows, leaves other segments alone', () {
+    const query = LibraryQuery(segment: LibrarySegment.watched, onMyServicesOnly: true);
+    expect(names(query, playable: (_) => false), hasLength(3));
+  });
+
   test('genres are listed most common first', () {
     expect(libraryGenres([inception, freeSolo]).first, 'Adventure');
   });

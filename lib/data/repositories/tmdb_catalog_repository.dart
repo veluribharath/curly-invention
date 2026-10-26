@@ -54,6 +54,9 @@ class TmdbCatalogRepository implements CatalogRepository {
   Future<TitlePage> discover(DiscoverQuery query) async {
     final type = query.type;
     final genreIds = TmdbGenres.ids(type, query.genres);
+    // A genre this type doesn't have (series have no Horror or Romance)
+    // matches nothing; leaving the filter out would return everything.
+    if (query.genres.isNotEmpty && genreIds.isEmpty) return TitlePage(titles: const [], page: query.page);
     final withoutIds = TmdbGenres.ids(type, query.withoutGenres);
     final dateField = type == MediaType.movie ? 'primary_release_date' : 'first_air_date';
     final params = <String, String>{

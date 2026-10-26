@@ -9,19 +9,39 @@ import 'package:reel/domain/usecases/query_library.dart';
 
 void main() {
   const settings = UserSettings(country: 'US', serviceIds: {8, 1899}, includeFreeWithAds: true);
+  const subscriptionsOnly = UserSettings(country: 'US', serviceIds: {8, 1899});
 
   group('feedQueries', () {
-    test('all covers movies and series on your services', () {
+    test('all covers movies and series on your services, plus free ones anywhere', () {
       final queries = feedQueries(const FeedFilter(), settings);
-      expect(queries.map((q) => q.type), [MediaType.movie, MediaType.tv]);
-      expect(queries.first.region, 'US');
+      expect(queries.map((q) => q.type), [MediaType.movie, MediaType.movie, MediaType.tv, MediaType.tv]);
+      expect(queries.every((q) => q.region == 'US'), isTrue);
       expect(queries.first.providerIds, {8, 1899});
-      expect(queries.first.monetization, {OfferType.subscription, OfferType.free, OfferType.ads});
+      expect(queries.first.monetization, {OfferType.subscription});
+      expect(queries[1].providerIds, isEmpty);
+      expect(queries[1].monetization, {OfferType.free, OfferType.ads});
+    });
+
+    test('without free titles, only your subscriptions', () {
+      final queries = feedQueries(const FeedFilter(), subscriptionsOnly);
+      expect(queries.map((q) => q.type), [MediaType.movie, MediaType.tv]);
+      expect(queries.map((q) => q.monetization), everyElement({OfferType.subscription}));
+    });
+
+    test('with no services picked, free titles only, not every subscription', () {
+      final queries = feedQueries(const FeedFilter(), const UserSettings(country: 'US', includeFreeWithAds: true));
+      expect(queries, hasLength(2));
+      for (final q in queries) {
+        expect(q.providerIds, isEmpty);
+        expect(q.monetization, {OfferType.free, OfferType.ads});
+      }
     });
 
     test('movies leave out docs; docs ask for them on both types', () {
-      expect(feedQueries(const FeedFilter(kind: KindFilter.movies), settings).single.withoutGenres, ['Documentary']);
-      final docs = feedQueries(const FeedFilter(kind: KindFilter.documentaries), settings);
+      expect(feedQueries(const FeedFilter(kind: KindFilter.movies), subscriptionsOnly).single.withoutGenres, [
+        'Documentary',
+      ]);
+      final docs = feedQueries(const FeedFilter(kind: KindFilter.documentaries), subscriptionsOnly);
       expect(docs.map((q) => q.genres), [
         ['Documentary'],
         ['Documentary'],
@@ -33,7 +53,7 @@ void main() {
     });
 
     test('people filters only go to movies', () {
-      expect(feedQueries(const FeedFilter(), settings, people: ['525']).map((q) => q.type), [MediaType.movie]);
+      expect(feedQueries(const FeedFilter(), subscriptionsOnly, people: ['525']).map((q) => q.type), [MediaType.movie]);
     });
   });
 

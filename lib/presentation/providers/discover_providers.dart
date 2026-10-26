@@ -187,6 +187,10 @@ class DiscoverState {
 /// The Discover feed. Starts over when the filter, country or services
 /// change; library changes only affect cards not yet dealt.
 class DiscoverFeed extends Notifier<DiscoverState> {
+  /// Loads in a row that may come back empty before giving up until the
+  /// next swipe or retry.
+  static const maxEmptyLoads = 5;
+
   FeedPager? _pager;
   int _generation = 0;
   bool _busy = false;
@@ -262,7 +266,14 @@ class DiscoverFeed extends Notifier<DiscoverState> {
     _busy = true;
     state = state.copyWith(loading: true, error: () => null);
     try {
-      final cards = await pager.loadMore();
+      // A load can come back empty when everything it fetched was excluded.
+      // Nothing would ask again (the spinner is already showing), so keep
+      // going while there's more to fetch.
+      var cards = await pager.loadMore();
+      for (var tries = 1; cards.isEmpty && !pager.exhausted && tries < maxEmptyLoads; tries++) {
+        if (generation != _generation || !ref.mounted) return;
+        cards = await pager.loadMore();
+      }
       if (generation != _generation || !ref.mounted) return;
       ref.read(seenTitlesProvider.notifier).addAll(cards.map((c) => c.title));
       state = state.copyWith(cards: [...state.cards, ...cards], loading: false, exhausted: pager.exhausted);

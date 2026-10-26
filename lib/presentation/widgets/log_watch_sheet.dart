@@ -65,7 +65,12 @@ class _LogWatchSheetState extends ConsumerState<LogWatchSheet> {
       firstDate: DateTime(1900),
       lastDate: now,
     );
-    if (picked != null) setState(() => _date = DateTime(picked.year, picked.month, picked.day, 20));
+    if (picked == null) return;
+    // An evening watch, unless that's still to come today.
+    final evening = DateTime(picked.year, picked.month, picked.day, 20);
+    setState(
+      () => _date = evening.isAfter(now) ? DateTime(now.year, now.month, now.day, now.hour, now.minute) : evening,
+    );
   }
 
   Future<void> _save() async {
@@ -73,15 +78,17 @@ class _LogWatchSheetState extends ConsumerState<LogWatchSheet> {
     final note = _note.text.trim();
     final watch = WatchEvent(watchedAt: _date, rating: _rating, note: note.isEmpty ? null : note);
     final index = widget.editIndex;
+    final editing = index != null && _editing != null;
     Navigator.of(context).pop();
-    await runLibraryAction(context, () async {
-      if (index != null && _editing != null) {
-        await actions.editWatch(widget.title, index, watch);
-        await actions.setFavorite(widget.title, _favorite);
-      } else {
-        await actions.logWatch(widget.title, watch, favorite: _favorite);
-      }
-    }, done: index == null ? 'Logged ${widget.title.name}' : 'Watch updated');
+    // One save: a second one would start from the library before the first
+    // landed (and, offline, Firestore's first write doesn't finish).
+    await runLibraryAction(
+      context,
+      () => editing
+          ? actions.editWatch(widget.title, index, watch, favorite: _favorite)
+          : actions.logWatch(widget.title, watch, favorite: _favorite),
+      done: editing ? 'Watch updated' : 'Logged ${widget.title.name}',
+    );
   }
 
   @override
