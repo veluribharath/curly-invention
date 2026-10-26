@@ -65,6 +65,7 @@ void main() {
     // Oct 20 is in the week before the one starting Monday Oct 26.
     expect(taste.weeks[10].watches, 1);
     expect(taste.weeks.last.watches, 0);
-    expect(formatHours(taste.minutesWatched), '8');
+    expect(formatHours(taste.minutesWatched), '7.7');
+    expect(formatHours(600), '10');
   });
 }
