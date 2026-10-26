@@ -5,9 +5,12 @@ import 'package:reel/data/repositories/availability_repositories.dart';
 import 'package:reel/data/repositories/mock_catalog_repository.dart';
 import 'package:reel/domain/entities/library_entry.dart';
 import 'package:reel/domain/entities/media_type.dart';
+import 'package:reel/domain/entities/feed_signal.dart';
 import 'package:reel/domain/entities/user_settings.dart';
+import 'package:reel/domain/repositories/feed_signal_repository.dart';
 import 'package:reel/domain/repositories/library_repository.dart';
 import 'package:reel/domain/repositories/settings_repository.dart';
+import 'package:reel/presentation/providers/discover_providers.dart';
 import 'package:reel/presentation/providers/providers.dart';
 
 /// A library kept in memory.
@@ -67,6 +70,25 @@ class MemorySettingsRepository implements SettingsRepository {
   Future<void> clear() async => settings = null;
 }
 
+/// Feed signals kept in memory.
+class MemoryFeedSignalRepository implements FeedSignalRepository {
+  final List<FeedSignal> signals;
+
+  MemoryFeedSignalRepository([List<FeedSignal>? signals]) : signals = [...?signals];
+
+  @override
+  Future<void> record(FeedSignal signal) async => signals.add(signal);
+
+  @override
+  Future<List<FeedSignal>> since(DateTime since) async => [
+    for (final s in signals)
+      if (s.at.isAfter(since)) s,
+  ];
+
+  @override
+  Future<void> clear() async => signals.clear();
+}
+
 final fixedNow = DateTime(2026, 10, 26, 20);
 
 /// Onboarded in the US with Netflix and Max.
@@ -74,9 +96,15 @@ UserSettings onboardedSettings() =>
     UserSettings(country: 'US', serviceIds: const {8, 1899}, onboardedAt: DateTime(2026, 10, 1));
 
 /// Overrides for running screens on mock data with an in-memory library.
-List<Override> testOverrides({MemoryLibraryRepository? library, MemorySettingsRepository? settings, DateTime? now}) {
+List<Override> testOverrides({
+  MemoryLibraryRepository? library,
+  MemorySettingsRepository? settings,
+  MemoryFeedSignalRepository? signals,
+  DateTime? now,
+}) {
   final repo = library ?? MemoryLibraryRepository();
   return [
+    feedSignalRepositoryProvider.overrideWithValue(signals ?? MemoryFeedSignalRepository()),
     settingsRepositoryProvider.overrideWithValue(settings ?? MemorySettingsRepository(onboardedSettings())),
     availabilityRepositoryProvider.overrideWithValue(const MockAvailabilityRepository()),
     deviceCountryProvider.overrideWithValue('US'),

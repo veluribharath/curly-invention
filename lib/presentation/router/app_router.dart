@@ -5,11 +5,11 @@ import 'package:go_router/go_router.dart';
 import 'package:reel/domain/entities/media_title.dart';
 import 'package:reel/domain/entities/media_type.dart';
 import 'package:reel/presentation/providers/providers.dart';
+import 'package:reel/presentation/screens/discover_screen.dart';
 import 'package:reel/presentation/screens/home_shell.dart';
 import 'package:reel/presentation/screens/library_screen.dart';
 import 'package:reel/presentation/screens/onboarding_screen.dart';
 import 'package:reel/presentation/screens/person_screen.dart';
-import 'package:reel/presentation/screens/placeholder_screen.dart';
 import 'package:reel/presentation/screens/reels_spike_screen.dart';
 import 'package:reel/presentation/screens/search_screen.dart';
 import 'package:reel/presentation/screens/services_screen.dart';
@@ -56,13 +56,7 @@ GoRouter buildRouter({required Listenable refresh, required bool? Function() onb
         builder: (context, state, shell) => HomeShell(shell: shell),
         branches: [
           StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: '/discover',
-                builder: (context, state) =>
-                    const PlaceholderScreen(title: 'Discover', icon: Icons.play_circle_outline),
-              ),
-            ],
+            routes: [GoRoute(path: '/discover', builder: (context, state) => const DiscoverScreen())],
           ),
           StatefulShellBranch(
             routes: [GoRoute(path: '/search', builder: (context, state) => const SearchScreen())],

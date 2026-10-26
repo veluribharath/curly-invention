@@ -7,11 +7,12 @@ is built on it.
 ## How to run it
 
 ```bash
-flutter run --release -d <device>     # no keys needed
+flutter run --profile -d <device>     # no keys needed
 ```
 
-Open the **You** tab and tap **Reels spike** (debug and profile builds show it;
-release builds too until Discover lands), or go to `/spike`.
+Open the **You** tab and tap **Reels spike** (debug and profile builds only).
+Discover itself (M3) uses the same approach with real feed data, so it's worth
+trying both.
 
 Five trailers in a vertical `PageView`. Only the card on screen has a live
 player; the others show the YouTube thumbnail. Each plays muted from an offset

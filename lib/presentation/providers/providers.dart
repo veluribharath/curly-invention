@@ -265,7 +265,10 @@ final watchlistAvailabilityProvider = StreamProvider<Map<TitleId, Availability>>
   // Refetch when the country changes.
   ref.watch(settingsProvider.select((s) => s.value?.country));
   final results = <TitleId, Availability>{};
-  yield const {};
+  if (ids.isEmpty) {
+    yield const {};
+    return;
+  }
   const batchSize = 6;
   for (var i = 0; i < ids.length; i += batchSize) {
     final batch = ids.skip(i).take(batchSize);
