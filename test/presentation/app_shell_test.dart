@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:reel/main.dart';
 
+import '../support/fakes.dart';
+
 void main() {
   testWidgets('the four tabs switch screens', (tester) async {
-    await tester.pumpWidget(const ProviderScope(child: ReelApp()));
+    await tester.pumpWidget(ProviderScope(overrides: testOverrides(), child: const ReelApp()));
     await tester.pumpAndSettle();
 
     expect(find.byType(NavigationBar), findsOneWidget);
