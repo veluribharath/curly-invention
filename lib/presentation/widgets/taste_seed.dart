@@ -65,19 +65,22 @@ class _TasteSeedDeckState extends ConsumerState<TasteSeedDeck> {
   Future<void> _onSwipe(MediaTitle title, SwipeDirection direction) async {
     final actions = ref.read(libraryActionsProvider);
     final now = ref.read(clockProvider)();
+    final messenger = ScaffoldMessenger.maybeOf(context);
     unawaited(HapticFeedback.selectionClick());
-    switch (direction) {
-      case SwipeDirection.right:
-        await actions.logWatch(title, WatchEvent(watchedAt: now, rating: Rating.liked));
-        setState(() => _rated++);
-      case SwipeDirection.left:
-        await actions.logWatch(title, WatchEvent(watchedAt: now, rating: Rating.disliked));
-        setState(() => _rated++);
-      case SwipeDirection.up:
-        await actions.setWatchlist(title, true);
-        setState(() => _rated++);
-      case SwipeDirection.down:
-        break;
+    final Future<void> Function()? save = switch (direction) {
+      SwipeDirection.right => () => actions.logWatch(title, WatchEvent(watchedAt: now, rating: Rating.liked)),
+      SwipeDirection.left => () => actions.logWatch(title, WatchEvent(watchedAt: now, rating: Rating.disliked)),
+      SwipeDirection.up => () => actions.setWatchlist(title, true),
+      SwipeDirection.down => null,
+    };
+    if (save == null) return;
+    // Counted at once: the deck can be left (Done) before the save lands.
+    setState(() => _rated++);
+    try {
+      await save();
+    } catch (e) {
+      if (mounted) setState(() => _rated--);
+      messenger?.showSnackBar(SnackBar(content: Text("Couldn't save ${title.name}: ${friendlyError(e)}")));
     }
   }
 

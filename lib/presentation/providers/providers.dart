@@ -116,8 +116,11 @@ class LibraryActions {
   /// A watch today with no rating, for one-tap "Watched".
   Future<void> markWatched(MediaTitle title) => logWatch(title, WatchEvent(watchedAt: _now));
 
-  Future<void> editWatch(MediaTitle title, int index, WatchEvent watch) =>
-      _save(_entryFor(title).editWatch(index, watch, now: _now));
+  /// Replaces a watch; [favorite] sets the favorite flag in the same save.
+  Future<void> editWatch(MediaTitle title, int index, WatchEvent watch, {bool? favorite}) {
+    final entry = _entryFor(title).editWatch(index, watch, now: _now);
+    return _save(favorite == null ? entry : entry.copyWith(favorite: favorite));
+  }
 
   Future<void> removeWatch(MediaTitle title, int index) => _save(_entryFor(title).removeWatch(index, now: _now));
 
@@ -254,14 +257,17 @@ final regionsProvider = FutureProvider<Map<String, String>>((ref) {
 /// Availability of each watchlist title, fetched a few at a time, as it
 /// arrives.
 final watchlistAvailabilityProvider = StreamProvider<Map<TitleId, Availability>>((ref) async* {
-  final ids = ref.watch(
+  // Selected as one string: a list would compare unequal on every library
+  // change and start the fetch over.
+  final key = ref.watch(
     libraryProvider.select(
-      (library) => [
+      (library) => ([
         for (final entry in library.value?.values ?? const <LibraryEntry>[])
           if (entry.onWatchlist) entry.id,
-      ]..sort(),
+      ]..sort()).join(','),
     ),
   );
+  final ids = [for (final raw in key.split(',')) ?TitleId.tryParse(raw)];
   // Refetch when the country changes.
   ref.watch(settingsProvider.select((s) => s.value?.country));
   final results = <TitleId, Availability>{};

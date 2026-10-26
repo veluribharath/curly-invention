@@ -134,8 +134,9 @@ class DiscoverCandidateSource implements CandidateSource {
   }
 }
 
-/// Discover queries for [filter]: one per media type it covers, limited to
-/// your services when the toggle is on.
+/// Discover queries for [filter]: one per media type it covers. With the
+/// toggle on, that's your subscriptions, plus free and ad-supported titles
+/// on any service when you count those.
 List<DiscoverQuery> feedQueries(
   FeedFilter filter,
   UserSettings settings, {
@@ -152,29 +153,37 @@ List<DiscoverQuery> feedQueries(
     KindFilter.series => [MediaType.tv],
     _ => MediaType.values,
   };
-  final monetization = {
-    OfferType.subscription,
-    if (settings.includeFreeWithAds) ...[OfferType.free, OfferType.ads],
-  };
+  // TMDB ORs providers with providers and types with types, but ANDs the
+  // two lists, so free titles on services you didn't pick need their own
+  // query. Without a provider list, subscriptions would mean any service.
+  final offers = <(Set<int>, Set<OfferType>)>[
+    if (!filter.myServicesOnly)
+      (const {}, const {OfferType.subscription})
+    else ...[
+      if (settings.serviceIds.isNotEmpty) (settings.serviceIds, const {OfferType.subscription}),
+      if (settings.includeFreeWithAds) (const {}, const {OfferType.free, OfferType.ads}),
+    ],
+  ];
   return [
     for (final type in types)
       // TMDB's TV discover has no people filter.
       if (people.isEmpty || type == MediaType.movie)
-        DiscoverQuery(
-          type: type,
-          sort: sort,
-          genres: docs ? const [MediaTitle.documentaryGenre] : genres,
-          withoutGenres: [
-            ...withoutGenres,
-            if (filter.kind == KindFilter.movies || filter.kind == KindFilter.series) MediaTitle.documentaryGenre,
-          ],
-          people: people,
-          releasedAfter: releasedAfter,
-          minVotes: minVotes,
-          region: filter.myServicesOnly ? settings.country : null,
-          providerIds: filter.myServicesOnly ? settings.serviceIds : const {},
-          monetization: monetization,
-        ),
+        for (final (providerIds, monetization) in offers)
+          DiscoverQuery(
+            type: type,
+            sort: sort,
+            genres: docs ? const [MediaTitle.documentaryGenre] : genres,
+            withoutGenres: [
+              ...withoutGenres,
+              if (filter.kind == KindFilter.movies || filter.kind == KindFilter.series) MediaTitle.documentaryGenre,
+            ],
+            people: people,
+            releasedAfter: releasedAfter,
+            minVotes: minVotes,
+            region: filter.myServicesOnly ? settings.country : null,
+            providerIds: providerIds,
+            monetization: monetization,
+          ),
   ];
 }
 

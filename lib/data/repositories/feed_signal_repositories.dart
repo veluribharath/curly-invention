@@ -47,16 +47,24 @@ class LocalFeedSignalRepository implements FeedSignalRepository {
     }
   }
 
+  /// Writes run one at a time, so two signals at once (watched the clip,
+  /// then unmuted) both stay.
+  Future<void> _pending = Future.value();
+
   @override
-  Future<void> record(FeedSignal signal) async {
-    final cutoff = _now().subtract(signalLifetime);
-    final kept = [
-      for (final s in await _load())
-        if (s.at.isAfter(cutoff)) s,
-      signal,
-    ];
-    final trimmed = kept.length > maxCount ? kept.sublist(kept.length - maxCount) : kept;
-    await (await _prefs).setString(_key, json.encode([for (final s in trimmed) _toJson(s)]));
+  Future<void> record(FeedSignal signal) {
+    final done = _pending.then((_) async {
+      final cutoff = _now().subtract(signalLifetime);
+      final kept = [
+        for (final s in await _load())
+          if (s.at.isAfter(cutoff)) s,
+        signal,
+      ];
+      final trimmed = kept.length > maxCount ? kept.sublist(kept.length - maxCount) : kept;
+      await (await _prefs).setString(_key, json.encode([for (final s in trimmed) _toJson(s)]));
+    });
+    _pending = done.catchError((Object _) {});
+    return done;
   }
 
   @override
@@ -66,7 +74,11 @@ class LocalFeedSignalRepository implements FeedSignalRepository {
   ];
 
   @override
-  Future<void> clear() async => (await _prefs).remove(_key);
+  Future<void> clear() {
+    final done = _pending.then((_) async => (await _prefs).remove(_key));
+    _pending = done.catchError((Object _) => true);
+    return done;
+  }
 }
 
 /// Signals in `users/{uid}/signals`. `expireAt` drives a Firestore TTL

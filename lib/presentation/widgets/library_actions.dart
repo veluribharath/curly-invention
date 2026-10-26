@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:reel/domain/entities/media_title.dart';
 import 'package:reel/presentation/providers/providers.dart';
+import 'package:reel/presentation/widgets/async_states.dart';
 import 'package:reel/presentation/widgets/log_watch_sheet.dart';
 
 /// Opens a title's details. The title passed along shows at once while the
@@ -16,7 +17,8 @@ void openTitle(BuildContext context, MediaTitle title) {
 }
 
 /// Runs a library change, with a haptic tap, and shows a message if it fails.
-Future<void> runLibraryAction(BuildContext context, Future<void> Function() action, {String? done}) async {
+/// Returns whether it saved.
+Future<bool> runLibraryAction(BuildContext context, Future<void> Function() action, {String? done}) async {
   final messenger = ScaffoldMessenger.maybeOf(context);
   unawaited(HapticFeedback.lightImpact());
   try {
@@ -26,8 +28,10 @@ Future<void> runLibraryAction(BuildContext context, Future<void> Function() acti
         ?..hideCurrentSnackBar()
         ..showSnackBar(SnackBar(content: Text(done), duration: const Duration(seconds: 2)));
     }
+    return true;
   } catch (e) {
-    messenger?.showSnackBar(SnackBar(content: Text("Couldn't save: $e")));
+    messenger?.showSnackBar(SnackBar(content: Text("Couldn't save: ${friendlyError(e)}")));
+    return false;
   }
 }
 

@@ -17,11 +17,22 @@ class LocalLibraryRepository implements LibraryRepository {
   final _changes = StreamController<Map<TitleId, LibraryEntry>>.broadcast();
   Map<TitleId, LibraryEntry>? _cache;
 
+  /// The first load, shared by everyone who asks while it runs.
+  Future<Map<TitleId, LibraryEntry>>? _loading;
+
+  /// Changes run one at a time: each reads what the last one wrote, so
+  /// quick saves (the taste deck) don't drop each other.
+  Future<void> _pending = Future.value();
+
   LocalLibraryRepository({Future<SharedPreferences>? prefs}) : _prefs = prefs ?? SharedPreferences.getInstance();
 
   Future<Map<TitleId, LibraryEntry>> _load() async {
     final cached = _cache;
     if (cached != null) return cached;
+    return _loading ??= _read();
+  }
+
+  Future<Map<TitleId, LibraryEntry>> _read() async {
     final raw = (await _prefs).getString(_key);
     final entries = <TitleId, LibraryEntry>{};
     if (raw != null) {
@@ -35,7 +46,7 @@ class LocalLibraryRepository implements LibraryRepository {
         // A corrupt cache starts over rather than locking the app up.
       }
     }
-    return _cache = entries;
+    return _cache ??= entries;
   }
 
   Future<void> _write(Map<TitleId, LibraryEntry> entries) async {
@@ -52,7 +63,7 @@ class LocalLibraryRepository implements LibraryRepository {
   }
 
   @override
-  Future<void> save(LibraryEntry entry) async {
+  Future<void> save(LibraryEntry entry) => _serial(() async {
     final entries = {...await _load()};
     if (entry.isEmpty) {
       entries.remove(entry.id);
@@ -60,16 +71,22 @@ class LocalLibraryRepository implements LibraryRepository {
       entries[entry.id] = entry;
     }
     await _write(entries);
-  }
+  });
 
   @override
-  Future<void> remove(TitleId id) async {
+  Future<void> remove(TitleId id) => _serial(() async {
     final entries = {...await _load()}..remove(id);
     await _write(entries);
-  }
+  });
 
   @override
-  Future<void> clear() => _write({});
+  Future<void> clear() => _serial(() => _write({}));
+
+  Future<void> _serial(Future<void> Function() change) {
+    final done = _pending.then((_) => change());
+    _pending = done.catchError((Object _) {});
+    return done;
+  }
 
   /// Every entry, for moving the library into an account.
   Future<List<LibraryEntry>> all() async => (await _load()).values.toList();

@@ -5,6 +5,7 @@ import 'package:reel/data/repositories/firestore_library_repository.dart';
 import 'package:reel/data/repositories/local_library_repository.dart';
 import 'package:reel/data/repositories/mock_catalog_repository.dart';
 import 'package:reel/domain/entities/library_entry.dart';
+import 'package:reel/domain/entities/media_title.dart';
 import 'package:reel/domain/entities/media_type.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -53,6 +54,17 @@ void main() {
     expect(await second.watchLibrary().first, isEmpty);
   });
 
+  test('quick saves to the local library all stick', () async {
+    SharedPreferences.setMockInitialValues({});
+    final repo = LocalLibraryRepository();
+    final titles = MockCatalog.titles.take(6).toList();
+    await Future.wait([
+      for (final title in titles) repo.save(LibraryEntry.empty(title, now: now).copyWith(onWatchlist: true)),
+    ]);
+    expect((await repo.watchLibrary().first).keys, unorderedEquals(titles.map((t) => t.id)));
+    expect((await LocalLibraryRepository().watchLibrary().first), hasLength(6));
+  });
+
   test('the Firestore library uses typed document ids', () async {
     final firestore = FakeFirebaseFirestore();
     final repo = FirestoreLibraryRepository(uid: 'u1', firestore: firestore);
@@ -72,5 +84,19 @@ void main() {
     await repo.save(newer);
     await repo.importEntries([entry]);
     expect((await repo.watchLibrary().first)[entry.id]!.favorite, isFalse);
+  });
+
+  test('importing a big library copies all of it', () async {
+    final firestore = FakeFirebaseFirestore();
+    final repo = FirestoreLibraryRepository(uid: 'u1', firestore: firestore);
+    final entries = [
+      for (var i = 1; i <= 450; i++)
+        LibraryEntry.empty(
+          MediaTitle(id: TitleId.movie(i), name: 'Movie $i'),
+          now: now,
+        ).copyWith(onWatchlist: true),
+    ];
+    await repo.importEntries(entries);
+    expect(await repo.watchLibrary().first, hasLength(450));
   });
 }

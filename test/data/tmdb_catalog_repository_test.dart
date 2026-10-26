@@ -75,6 +75,15 @@ void main() {
     expect(query['sort_by'], 'vote_average.desc');
   });
 
+  test('a genre series lack matches no series instead of all of them', () async {
+    final page = await repo().discover(const DiscoverQuery(type: MediaType.tv, genres: ['Horror', 'Romance']));
+    expect(page.titles, isEmpty);
+    expect(requests, isEmpty);
+
+    await repo().discover(const DiscoverQuery(type: MediaType.tv, genres: ['Horror', 'Science Fiction']));
+    expect(requests.single.url.queryParameters['with_genres'], '10765');
+  });
+
   test('search adds the known titles of people found', () async {
     responses['/3/search/multi'] = {
       'page': 1,

@@ -33,7 +33,8 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
   /// Swiping past faster than this is a weak "not interested".
   static const _quickSkip = Duration(seconds: 2);
 
-  final _pages = PageController();
+  // Not kept in page storage: a feed that starts over starts at the top.
+  final _pages = PageController(keepPage: false);
   int _current = 0;
   DateTime _shownAt = DateTime.now();
 
@@ -75,6 +76,10 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
     final feed = ref.watch(discoverFeedProvider);
     final filter = ref.watch(discoverFilterProvider);
     ref.listen(discoverFilterProvider, (_, _) => _resetPosition());
+    // The feed starts over when services or the country change, too.
+    ref.listen(discoverFeedProvider, (previous, next) {
+      if (next.cards.isEmpty && (previous?.cards.isNotEmpty ?? false)) _resetPosition();
+    });
     final current = _current < feed.cards.length ? feed.cards[_current] : null;
 
     return Scaffold(
@@ -154,6 +159,9 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
     }
 
     final muted = ref.watch(reelMutedProvider);
+    // Off while another tab is showing or a screen covers Discover (both
+    // turn tickers off), so the clip doesn't keep playing out of sight.
+    final onScreen = TickerMode.valuesOf(context).enabled;
     return RefreshIndicator(
       onRefresh: () async {
         _resetPosition();
@@ -180,7 +188,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
           return ReelCard(
             key: ValueKey(card.id),
             card: card,
-            live: index == _current,
+            live: index == _current && onScreen,
             muted: muted,
             onRemove: () => _removeCard(card.id),
           );
@@ -336,9 +344,15 @@ class ReelCard extends ConsumerWidget {
                       label: 'Watched',
                       onTap: () async {
                         final messenger = ScaffoldMessenger.of(context);
-                        // The card goes away; the sheet needs a context that stays.
+                        // The card goes away, and its ref and context with it; the
+                        // snack bar's action needs ones that stay.
                         final sheetContext = Navigator.of(context).context;
-                        await runLibraryAction(context, () => ref.read(libraryActionsProvider).markWatched(title));
+                        final container = ProviderScope.containerOf(context, listen: false);
+                        final saved = await runLibraryAction(
+                          context,
+                          () => ref.read(libraryActionsProvider).markWatched(title),
+                        );
+                        if (!saved) return;
                         onRemove();
                         messenger
                           ..hideCurrentSnackBar()
@@ -348,8 +362,9 @@ class ReelCard extends ConsumerWidget {
                               action: SnackBarAction(
                                 label: 'Rate it',
                                 onPressed: () {
-                                  final index = (ref.read(libraryEntryProvider(title.id))?.watches.length ?? 1) - 1;
-                                  showLogWatchSheet(sheetContext, title, editIndex: index);
+                                  final watches = container.read(libraryEntryProvider(title.id))?.watches ?? const [];
+                                  if (watches.isEmpty || !sheetContext.mounted) return;
+                                  showLogWatchSheet(sheetContext, title, editIndex: watches.length - 1);
                                 },
                               ),
                             ),

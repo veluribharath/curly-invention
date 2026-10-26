@@ -429,10 +429,13 @@ class MockCatalogRepository implements CatalogRepository {
         return false;
       }
       if (query.releasedAfter != null && (t.year ?? 0) < query.releasedAfter!.year) return false;
-      if (query.region != null && query.providerIds.isNotEmpty) {
+      // As on TMDB: without providers, the monetization types still apply.
+      if (query.region != null) {
         final offers = MockCatalog.offers[t.id] ?? const [];
         final match = offers.any(
-          (o) => query.providerIds.contains(o.service.providerId) && query.monetization.contains(o.type),
+          (o) =>
+              (query.providerIds.isEmpty || query.providerIds.contains(o.service.providerId)) &&
+              query.monetization.contains(o.type),
         );
         if (!match) return false;
       }
