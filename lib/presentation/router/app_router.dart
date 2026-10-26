@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:reel/domain/entities/media_title.dart';
 import 'package:reel/domain/entities/media_type.dart';
 import 'package:reel/presentation/providers/providers.dart';
+import 'package:reel/presentation/screens/about_screen.dart';
 import 'package:reel/presentation/screens/discover_screen.dart';
 import 'package:reel/presentation/screens/home_shell.dart';
 import 'package:reel/presentation/screens/library_screen.dart';
@@ -73,6 +74,7 @@ GoRouter buildRouter({required Listenable refresh, required bool? Function() onb
                 routes: [
                   GoRoute(path: 'services', builder: (context, state) => const ServicesScreen()),
                   GoRoute(path: 'country', builder: (context, state) => const ServicesScreen(country: true)),
+                  GoRoute(path: 'about', builder: (context, state) => const AboutScreen()),
                   GoRoute(
                     path: 'rate',
                     builder: (context, state) => Scaffold(

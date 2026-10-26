@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:reel/presentation/providers/providers.dart';
+import 'package:reel/presentation/widgets/account_section.dart';
 import 'package:reel/presentation/widgets/service_logo.dart';
 import 'package:reel/presentation/widgets/stats_section.dart';
 
@@ -54,7 +55,7 @@ class YouScreen extends ConsumerWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/you/country'),
           ),
-          ...ref.watch(youSettingsTilesProvider),
+          const AccountSection(),
           if (!kReleaseMode)
             ListTile(
               leading: const Icon(Icons.science_outlined),
@@ -68,6 +69,3 @@ class YouScreen extends ConsumerWidget {
     );
   }
 }
-
-/// Extra tiles under Streaming: account, data, about.
-final youSettingsTilesProvider = Provider<List<Widget>>((ref) => const []);
