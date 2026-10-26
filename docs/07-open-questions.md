@@ -5,8 +5,8 @@ milestones, not architecture.
 
 | # | Question | Default assumed | What changes if different |
 |---|---|---|---|
-| 1 | Is this a commercial app (paid, ads, subscription) or free/personal? | Free, non-commercial for now | Commercial needs a TMDB commercial license and makes a paid availability API more attractive early. |
-| 2 | Free TMDB availability data first, or pay for deep links ("Open in Netflix") from day one? | TMDB first, paid source after launch | Paying early moves the Cloud Functions proxy into M2 and adds a monthly API cost. |
+| 1 | Is this a commercial app (paid, ads, subscription) or free/personal? | **Decided (2026-10-26):** free, non-commercial | Commercial needs a TMDB commercial license and makes a paid availability API more attractive early. |
+| 2 | Free TMDB availability data first, or pay for deep links ("Open in Netflix") from day one? | **Decided (2026-10-26):** TMDB first, paid source after launch | Paying early moves the Cloud Functions proxy into M2 and adds a monthly API cost. |
 | 3 | Launch countries | Any country TMDB has provider data for; test with US and India | A single-country launch simplifies QA and curated clip overrides. |
 | 4 | Accounts: optional sign-in (anonymous first) or required? | Optional; anonymous first, upgrade to Apple/Google | Required sign-in simplifies sync logic but adds a wall at first launch. |
 | 5 | Rating scale for watched titles | Three levels: didn't like / liked / loved, plus favorite | Five stars or half stars only changes the entity and the taste weights. |
