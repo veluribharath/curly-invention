@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:reel/presentation/providers/providers.dart';
 import 'package:reel/presentation/widgets/service_picker.dart';
+import 'package:reel/presentation/widgets/taste_seed.dart';
 
 /// First run: what the app does, your country, your services. Each step
 /// saves as you go, so leaving halfway keeps what you picked.
@@ -13,9 +14,17 @@ class OnboardingScreen extends ConsumerStatefulWidget {
   ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-/// Extra steps after the services, e.g. seeding your taste. Each returns a
-/// page given a callback that moves on.
-final onboardingExtraStepsProvider = Provider<List<Widget Function(VoidCallback next)>>((ref) => const []);
+/// Steps after the services. Each returns a page given a callback that
+/// moves on.
+final onboardingExtraStepsProvider = Provider<List<Widget Function(VoidCallback next)>>((ref) {
+  return [
+    (next) => _Step(
+      title: 'Seed your taste',
+      subtitle: 'Optional. Swipe right if you liked it, left if not, up to save it, down if you haven\'t seen it.',
+      child: TasteSeedDeck(onDone: (_) => next(), doneLabel: 'Continue'),
+    ),
+  ];
+});
 
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final _pages = PageController();
@@ -143,14 +152,16 @@ class _Step extends StatelessWidget {
   final String subtitle;
   final Widget child;
   final Widget? footer;
-  final VoidCallback onNext;
+
+  /// Null hides the button, for steps with their own.
+  final VoidCallback? onNext;
   final String nextLabel;
 
   const _Step({
     required this.title,
     required this.subtitle,
     required this.child,
-    required this.onNext,
+    this.onNext,
     this.footer,
     this.nextLabel = 'Continue',
   });
@@ -176,13 +187,14 @@ class _Step extends StatelessWidget {
           ),
           Expanded(child: child),
           ?footer,
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: SizedBox(
-              width: double.infinity,
-              child: FilledButton(onPressed: onNext, child: Text(nextLabel)),
+          if (onNext != null)
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: SizedBox(
+                width: double.infinity,
+                child: FilledButton(onPressed: onNext, child: Text(nextLabel)),
+              ),
             ),
-          ),
         ],
       ),
     );

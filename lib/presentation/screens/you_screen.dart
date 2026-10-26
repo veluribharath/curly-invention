@@ -5,9 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:reel/presentation/providers/providers.dart';
 import 'package:reel/presentation/widgets/service_logo.dart';
-
-/// Extra sections of the You tab, above settings: stats, account.
-final youSectionsProvider = Provider<List<Widget>>((ref) => const []);
+import 'package:reel/presentation/widgets/stats_section.dart';
 
 /// Stats, services and country, account and app info.
 class YouScreen extends ConsumerWidget {
@@ -28,7 +26,7 @@ class YouScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('You')),
       body: ListView(
         children: [
-          ...ref.watch(youSectionsProvider),
+          const StatsSection(),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
             child: Text('Streaming', style: textTheme.titleMedium),

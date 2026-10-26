@@ -10,7 +10,9 @@ import 'package:reel/domain/entities/media_type.dart';
 import 'package:reel/domain/entities/user_settings.dart';
 import 'package:reel/domain/repositories/catalog_repository.dart';
 import 'package:reel/domain/repositories/feed_signal_repository.dart';
+import 'package:reel/domain/usecases/analyze_taste.dart';
 import 'package:reel/domain/usecases/discover_feed.dart';
+import 'package:reel/domain/usecases/personalized_feed.dart';
 import 'package:reel/presentation/providers/providers.dart';
 
 // ---------------------------------------------------------------------------
@@ -99,50 +101,48 @@ class FeedInputs {
   });
 }
 
-/// The candidate sources and scorer for a feed. Replaced as personalization
-/// grows; see [defaultFeedSources].
+/// The candidate sources and scorer for a feed.
 typedef FeedBuilder = ({List<CandidateSource> sources, FeedScorer score}) Function(FeedInputs inputs);
 
-final feedBuilderProvider = Provider<FeedBuilder>((ref) => defaultFeedSources);
-
-/// Watchlist titles you can play now, popular on your services, and fresh
-/// releases.
-({List<CandidateSource> sources, FeedScorer score}) defaultFeedSources(FeedInputs inputs) {
-  final filter = inputs.filter;
-  final settings = inputs.settings;
-  final watchlist = [
-    for (final entry in inputs.library.values)
-      if (entry.onWatchlist &&
-          filter.kind.matches(entry.snapshot.type, isDocumentary: entry.snapshot.isDocumentary) &&
-          (!filter.myServicesOnly || inputs.isPlayable(entry.id)))
-        FeedCandidate(entry.snapshot, FeedSource.watchlist, 'On your watchlist'),
-  ]..shuffle();
-  return (
-    sources: [
-      ListCandidateSource(watchlist),
-      DiscoverCandidateSource(
-        inputs.catalog,
-        source: FeedSource.popular,
-        reason: (_) => filter.myServicesOnly ? 'Popular on your services' : 'Popular right now',
-        queries: feedQueries(filter, settings, minVotes: 100),
-      ),
-      DiscoverCandidateSource(
-        inputs.catalog,
-        source: FeedSource.fresh,
-        reason: (_) => 'New this season',
-        queries: feedQueries(
-          filter,
-          settings,
-          sort: DiscoverSort.newest,
-          releasedAfter: inputs.now.subtract(const Duration(days: 90)),
-          minVotes: 10,
-        ),
-        maxPages: 3,
-      ),
-    ],
-    score: baseScore,
+final feedBuilderProvider = Provider<FeedBuilder>((ref) {
+  return (inputs) => personalizedFeed(
+    catalog: inputs.catalog,
+    filter: inputs.filter,
+    settings: inputs.settings,
+    library: inputs.library.values,
+    taste: ref.read(tasteProfileProvider),
+    isWatchlistPlayable: inputs.isPlayable,
+    isPlayableNow: (title) async {
+      final availability = await ref.read(availabilityProvider(title.id).future);
+      return availability.isPlayableOn(inputs.settings.serviceIds, includeFree: inputs.settings.includeFreeWithAds);
+    },
+    now: inputs.now,
   );
+});
+
+/// Titles dealt on Discover this session, so signals about them can count
+/// toward your taste.
+class SeenTitles extends Notifier<Map<TitleId, MediaTitle>> {
+  @override
+  Map<TitleId, MediaTitle> build() => const {};
+
+  void addAll(Iterable<MediaTitle> titles) => state = {...state, for (final t in titles) t.id: t};
 }
+
+final seenTitlesProvider = NotifierProvider<SeenTitles, Map<TitleId, MediaTitle>>(SeenTitles.new);
+
+/// Your taste, from the library and recent Discover signals.
+final tasteProfileProvider = Provider<TasteProfile>((ref) {
+  final library = ref.watch(libraryProvider).value ?? const {};
+  final signals = ref.watch(feedSignalsProvider);
+  final seen = ref.watch(seenTitlesProvider);
+  return analyzeTaste(
+    library: library.values,
+    signals: signals,
+    lookup: (id) => seen[id] ?? library[id]?.snapshot,
+    now: ref.watch(clockProvider)(),
+  );
+});
 
 /// Titles Discover leaves out: watched ones, "not for me", and ones you
 /// skipped quickly in the last week.
@@ -264,6 +264,7 @@ class DiscoverFeed extends Notifier<DiscoverState> {
     try {
       final cards = await pager.loadMore();
       if (generation != _generation || !ref.mounted) return;
+      ref.read(seenTitlesProvider.notifier).addAll(cards.map((c) => c.title));
       state = state.copyWith(cards: [...state.cards, ...cards], loading: false, exhausted: pager.exhausted);
     } catch (e) {
       if (generation != _generation || !ref.mounted) return;

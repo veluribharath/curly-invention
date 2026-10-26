@@ -15,6 +15,7 @@ import 'package:reel/presentation/screens/search_screen.dart';
 import 'package:reel/presentation/screens/services_screen.dart';
 import 'package:reel/presentation/screens/title_details_screen.dart';
 import 'package:reel/presentation/screens/you_screen.dart';
+import 'package:reel/presentation/widgets/taste_seed.dart';
 
 /// The app's router. First run goes to onboarding until it's finished.
 final routerProvider = Provider<GoRouter>((ref) {
@@ -72,6 +73,13 @@ GoRouter buildRouter({required Listenable refresh, required bool? Function() onb
                 routes: [
                   GoRoute(path: 'services', builder: (context, state) => const ServicesScreen()),
                   GoRoute(path: 'country', builder: (context, state) => const ServicesScreen(country: true)),
+                  GoRoute(
+                    path: 'rate',
+                    builder: (context, state) => Scaffold(
+                      appBar: AppBar(title: const Text('Rate titles')),
+                      body: TasteSeedDeck(onDone: (_) => context.pop()),
+                    ),
+                  ),
                 ],
               ),
             ],
