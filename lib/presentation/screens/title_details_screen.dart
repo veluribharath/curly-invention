@@ -233,7 +233,8 @@ class _WatchHistory extends ConsumerWidget {
               dense: true,
               leading: Icon(_ratingIcon(watches[i].rating)),
               title: Text(
-                '${i == 0 ? 'Watched' : 'Rewatched'} ${localizations.formatMediumDate(watches[i].watchedAt)}'
+                '${i == 0 ? 'Watched' : 'Rewatched'} '
+                '${watches[i].dateKnown ? localizations.formatMediumDate(watches[i].watchedAt) : 'before'}'
                 '${watches[i].rating == null ? '' : ' · ${watches[i].rating!.label}'}',
               ),
               subtitle: watches[i].note == null ? null : Text(watches[i].note!),

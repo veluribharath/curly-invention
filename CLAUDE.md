@@ -7,7 +7,7 @@ Reel: a free Flutter app (iOS and Android) to track movies and series, keep a wa
 Clean Architecture, package `reel`:
 
 - `lib/core/`: `AppConfig` (dart-defines), theme, TMDB image URLs.
-- `lib/domain/`: pure Dart. Entities (`MediaTitle`, `TitleId` as `movie:1` / doc id `movie_1`, `LibraryEntry` with `WatchEvent`s, `Availability`), repository interfaces, use cases (`query_library`, `discover_feed`, `personalized_feed`, `analyze_taste`, `pick_clip`, `export_library`).
+- `lib/domain/`: pure Dart. Entities (`MediaTitle`, `TitleId` as `movie:1` / doc id `movie_1`, `LibraryEntry` with `WatchEvent`s (`dateKnown` false for "seen before", e.g. setup swipes), `Availability`), repository interfaces, use cases (`query_library`, `build_diary`, `discover_feed`, `personalized_feed`, `analyze_taste`, `pick_clip`, `export_library`).
 - `lib/data/`: TMDB client and mapper, mock catalog, local and Firestore repositories, `AuthService`.
 - `lib/presentation/`: Riverpod providers (`providers/`), go_router (`router/app_router.dart`, a `StatefulShellRoute` with Discover, Search, Library, You), screens and widgets.
 

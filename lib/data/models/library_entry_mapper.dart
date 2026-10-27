@@ -32,6 +32,7 @@ class LibraryEntryMapper {
             'watchedAt': date(watch.watchedAt),
             if (watch.rating != null) 'rating': watch.rating!.name,
             if (watch.note != null && watch.note!.isNotEmpty) 'note': watch.note,
+            if (!watch.dateKnown) 'dateUnknown': true,
           },
       ],
       'addedAt': date(entry.addedAt),
@@ -64,6 +65,7 @@ class LibraryEntryMapper {
             watchedAt: readDate(raw['watchedAt'])!,
             rating: Rating.parse(raw['rating']),
             note: raw['note'] is String ? raw['note'] as String : null,
+            dateKnown: raw['dateUnknown'] != true,
           ),
     ]..sort((a, b) => a.watchedAt.compareTo(b.watchedAt));
 

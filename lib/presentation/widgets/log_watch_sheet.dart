@@ -30,6 +30,9 @@ class LogWatchSheet extends ConsumerStatefulWidget {
 
 class _LogWatchSheetState extends ConsumerState<LogWatchSheet> {
   late DateTime _date;
+
+  /// False while editing a watch logged without a date, until one is picked.
+  late bool _dateKnown;
   Rating? _rating;
   late bool _favorite;
   final _note = TextEditingController();
@@ -46,6 +49,7 @@ class _LogWatchSheetState extends ConsumerState<LogWatchSheet> {
     final now = ref.read(clockProvider)();
     final editing = _editing;
     _date = editing?.watchedAt ?? DateTime(now.year, now.month, now.day, now.hour, now.minute);
+    _dateKnown = editing?.dateKnown ?? true;
     _rating = editing?.rating;
     _note.text = editing?.note ?? '';
     _favorite = ref.read(libraryEntryProvider(widget.title.id))?.favorite ?? false;
@@ -68,15 +72,21 @@ class _LogWatchSheetState extends ConsumerState<LogWatchSheet> {
     if (picked == null) return;
     // An evening watch, unless that's still to come today.
     final evening = DateTime(picked.year, picked.month, picked.day, 20);
-    setState(
-      () => _date = evening.isAfter(now) ? DateTime(now.year, now.month, now.day, now.hour, now.minute) : evening,
-    );
+    setState(() {
+      _dateKnown = true;
+      _date = evening.isAfter(now) ? DateTime(now.year, now.month, now.day, now.hour, now.minute) : evening;
+    });
   }
 
   Future<void> _save() async {
     final actions = ref.read(libraryActionsProvider);
     final note = _note.text.trim();
-    final watch = WatchEvent(watchedAt: _date, rating: _rating, note: note.isEmpty ? null : note);
+    final watch = WatchEvent(
+      watchedAt: _date,
+      rating: _rating,
+      note: note.isEmpty ? null : note,
+      dateKnown: _dateKnown,
+    );
     final index = widget.editIndex;
     final editing = index != null && _editing != null;
     Navigator.of(context).pop();
@@ -114,7 +124,7 @@ class _LogWatchSheetState extends ConsumerState<LogWatchSheet> {
             contentPadding: EdgeInsets.zero,
             leading: const Icon(Icons.event),
             title: const Text('Watched on'),
-            trailing: Text(localizations.formatMediumDate(_date)),
+            trailing: Text(_dateKnown ? localizations.formatMediumDate(_date) : 'Not sure, pick a date'),
             onTap: _pickDate,
           ),
           const SizedBox(height: 8),

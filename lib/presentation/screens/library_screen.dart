@@ -25,9 +25,19 @@ class LibraryScreen extends ConsumerWidget {
     final grid = ref.watch(libraryGridProvider);
 
     return Scaffold(
+      floatingActionButton: FloatingActionButton.extended(
+        icon: const Icon(Icons.add),
+        label: const Text('Add'),
+        onPressed: () => showAddToLibrarySheet(context),
+      ),
       appBar: AppBar(
         title: const Text('Library'),
         actions: [
+          IconButton(
+            tooltip: 'Diary',
+            icon: const Icon(Icons.menu_book_outlined),
+            onPressed: () => context.push('/library/diary'),
+          ),
           IconButton(
             tooltip: grid ? 'Show as list' : 'Show as grid',
             icon: Icon(grid ? Icons.view_list : Icons.grid_view),
@@ -90,6 +100,41 @@ class LibraryScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Ways to add to your library: find a title, or swipe through well-known
+/// ones as in setup.
+Future<void> showAddToLibrarySheet(BuildContext context) {
+  return showModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    builder: (sheet) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.search),
+            title: const Text('Find a title'),
+            subtitle: const Text('Log a watch or save it for later'),
+            onTap: () {
+              Navigator.pop(sheet);
+              context.go('/search');
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.swipe),
+            title: const Text('Swipe through popular titles'),
+            subtitle: const Text("Mark what you've seen and what you want to watch"),
+            onTap: () {
+              Navigator.pop(sheet);
+              context.push('/library/rate');
+            },
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    ),
+  );
 }
 
 /// Whether a watchlist title streams on your services right now. Titles
@@ -214,7 +259,7 @@ class _Grid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GridView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
         maxCrossAxisExtent: 130,
         childAspectRatio: 2 / 3.7,
@@ -263,7 +308,7 @@ class _List extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final actions = ref.read(libraryActionsProvider);
     return ListView.builder(
-      padding: const EdgeInsets.only(bottom: 24),
+      padding: const EdgeInsets.only(bottom: 96),
       itemCount: entries.length,
       itemBuilder: (context, index) {
         final entry = entries[index];
@@ -378,7 +423,7 @@ class _EmptyLibrary extends StatelessWidget {
     if (filtered) return const EmptyMessage(icon: Icons.filter_alt_off, message: 'Nothing matches these filters.');
     final message = switch (segment) {
       LibrarySegment.watchlist => 'Save titles you want to watch and they show up here.',
-      LibrarySegment.watched => "Log what you've watched to build your record.",
+      LibrarySegment.watched => "Log what you've watched to build your diary. Add more whenever you remember.",
       LibrarySegment.favorites => 'Star the titles you love most.',
     };
     return EmptyMessage(

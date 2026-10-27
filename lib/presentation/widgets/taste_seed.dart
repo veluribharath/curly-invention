@@ -68,8 +68,15 @@ class _TasteSeedDeckState extends ConsumerState<TasteSeedDeck> {
     final messenger = ScaffoldMessenger.maybeOf(context);
     unawaited(HapticFeedback.selectionClick());
     final Future<void> Function()? save = switch (direction) {
-      SwipeDirection.right => () => actions.logWatch(title, WatchEvent(watchedAt: now, rating: Rating.liked)),
-      SwipeDirection.left => () => actions.logWatch(title, WatchEvent(watchedAt: now, rating: Rating.disliked)),
+      // Seen at some point; the date can be filled in later from the diary.
+      SwipeDirection.right => () => actions.logWatch(
+        title,
+        WatchEvent(watchedAt: now, rating: Rating.liked, dateKnown: false),
+      ),
+      SwipeDirection.left => () => actions.logWatch(
+        title,
+        WatchEvent(watchedAt: now, rating: Rating.disliked, dateKnown: false),
+      ),
       SwipeDirection.up => () => actions.setWatchlist(title, true),
       SwipeDirection.down => null,
     };
