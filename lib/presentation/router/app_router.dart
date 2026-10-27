@@ -6,6 +6,7 @@ import 'package:reel/domain/entities/media_title.dart';
 import 'package:reel/domain/entities/media_type.dart';
 import 'package:reel/presentation/providers/providers.dart';
 import 'package:reel/presentation/screens/about_screen.dart';
+import 'package:reel/presentation/screens/diary_screen.dart';
 import 'package:reel/presentation/screens/discover_screen.dart';
 import 'package:reel/presentation/screens/home_shell.dart';
 import 'package:reel/presentation/screens/library_screen.dart';
@@ -64,7 +65,16 @@ GoRouter buildRouter({required Listenable refresh, required bool? Function() onb
             routes: [GoRoute(path: '/search', builder: (context, state) => const SearchScreen())],
           ),
           StatefulShellBranch(
-            routes: [GoRoute(path: '/library', builder: (context, state) => const LibraryScreen())],
+            routes: [
+              GoRoute(
+                path: '/library',
+                builder: (context, state) => const LibraryScreen(),
+                routes: [
+                  GoRoute(path: 'diary', builder: (context, state) => const DiaryScreen()),
+                  GoRoute(path: 'rate', builder: (context, state) => const _RateTitlesScreen()),
+                ],
+              ),
+            ],
           ),
           StatefulShellBranch(
             routes: [
@@ -75,13 +85,7 @@ GoRouter buildRouter({required Listenable refresh, required bool? Function() onb
                   GoRoute(path: 'services', builder: (context, state) => const ServicesScreen()),
                   GoRoute(path: 'country', builder: (context, state) => const ServicesScreen(country: true)),
                   GoRoute(path: 'about', builder: (context, state) => const AboutScreen()),
-                  GoRoute(
-                    path: 'rate',
-                    builder: (context, state) => Scaffold(
-                      appBar: AppBar(title: const Text('Rate titles')),
-                      body: TasteSeedDeck(onDone: (_) => context.pop()),
-                    ),
-                  ),
+                  GoRoute(path: 'rate', builder: (context, state) => const _RateTitlesScreen()),
                 ],
               ),
             ],
@@ -107,6 +111,19 @@ GoRouter buildRouter({required Listenable refresh, required bool? Function() onb
       GoRoute(path: '/spike', parentNavigatorKey: rootKey, builder: (context, state) => const ReelsSpikeScreen()),
     ],
   );
+}
+
+/// The onboarding swipe deck, to keep adding what you've seen or want to.
+class _RateTitlesScreen extends StatelessWidget {
+  const _RateTitlesScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Rate titles')),
+      body: TasteSeedDeck(onDone: (_) => context.pop()),
+    );
+  }
 }
 
 TitleId? _titleId(GoRouterState state) =>

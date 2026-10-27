@@ -202,11 +202,11 @@ TasteProfile analyzeTaste({
     if (entry.watched) titlesWatched++;
     for (final watch in entry.watches) {
       final at = watch.watchedAt;
+      // Runtime counts, but a watch without a date isn't activity this week.
+      minutes += entry.snapshot.runtimeMinutes ?? 0;
+      if (!watch.dateKnown) continue;
       if (!at.isBefore(monthStart) && !at.isAfter(now)) thisMonth++;
       if (!at.isBefore(yearStart) && !at.isAfter(now)) thisYear++;
-      // A series counts one episode-length per logged watch; we don't
-      // track episodes yet.
-      minutes += entry.snapshot.runtimeMinutes ?? 0;
       final index = _weeksBetween(firstWeek, _weekStart(at.toLocal()));
       if (index >= 0 && index < weekCount) weekly[index]++;
     }

@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:reel/presentation/providers/providers.dart';
+import 'package:reel/presentation/widgets/async_states.dart';
 import 'package:reel/presentation/widgets/service_picker.dart';
 import 'package:reel/presentation/widgets/taste_seed.dart';
 
 /// First run: what the app does, your country, your services. Each step
-/// saves as you go, so leaving halfway keeps what you picked.
+/// saves as you go, so leaving halfway keeps what you picked, and "Finish
+/// later" skips the rest; everything stays editable on the You tab.
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
 
@@ -39,11 +41,25 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   void _next() {
     final extra = ref.read(onboardingExtraStepsProvider);
     if (_step >= 2 + extra.length) {
-      ref.read(settingsActionsProvider).finishOnboarding();
+      _finish();
       return;
     }
     setState(() => _step++);
     _pages.animateToPage(_step, duration: const Duration(milliseconds: 280), curve: Curves.easeOutCubic);
+  }
+
+  /// Ends setup with whatever was picked so far.
+  Future<void> _finish() async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref.read(settingsActionsProvider).finishOnboarding();
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text("Couldn't save: ${friendlyError(e)}")));
+      return;
+    }
+    messenger.showSnackBar(
+      const SnackBar(content: Text('You can change your country, services and ratings any time on the You tab.')),
+    );
   }
 
   void _back() {
@@ -70,12 +86,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             : AppBar(
                 leading: IconButton(icon: const Icon(Icons.arrow_back), tooltip: 'Back', onPressed: _back),
                 title: Text('Step $_step of ${2 + extra.length}'),
+                actions: [TextButton(onPressed: _finish, child: const Text('Finish later'))],
               ),
         body: PageView(
           controller: _pages,
           physics: const NeverScrollableScrollPhysics(),
           children: [
-            _Welcome(onStart: _next),
+            _Welcome(onStart: _next, onLater: _finish),
             _Step(
               title: 'Where do you watch?',
               subtitle: 'What streams where depends on the country.',
@@ -113,8 +130,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
 class _Welcome extends StatelessWidget {
   final VoidCallback onStart;
+  final VoidCallback onLater;
 
-  const _Welcome({required this.onStart});
+  const _Welcome({required this.onStart, required this.onLater});
 
   @override
   Widget build(BuildContext context) {
@@ -139,6 +157,11 @@ class _Welcome extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: FilledButton(onPressed: onStart, child: const Text('Get started')),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: TextButton(onPressed: onLater, child: const Text('Set up later')),
             ),
           ],
         ),

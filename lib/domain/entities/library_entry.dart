@@ -27,14 +27,22 @@ class WatchEvent {
   final Rating? rating;
   final String? note;
 
-  const WatchEvent({required this.watchedAt, this.rating, this.note});
+  /// False for "seen it at some point", e.g. a swipe in setup: [watchedAt]
+  /// is then when it was logged, not when it was watched.
+  final bool dateKnown;
+
+  const WatchEvent({required this.watchedAt, this.rating, this.note, this.dateKnown = true});
 
   @override
   bool operator ==(Object other) =>
-      other is WatchEvent && other.watchedAt == watchedAt && other.rating == rating && other.note == note;
+      other is WatchEvent &&
+      other.watchedAt == watchedAt &&
+      other.rating == rating &&
+      other.note == note &&
+      other.dateKnown == dateKnown;
 
   @override
-  int get hashCode => Object.hash(watchedAt, rating, note);
+  int get hashCode => Object.hash(watchedAt, rating, note, dateKnown);
 }
 
 /// A title in your library: on the watchlist, watched, or both.

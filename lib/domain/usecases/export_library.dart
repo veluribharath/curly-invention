@@ -22,7 +22,7 @@ String libraryToCsv(Iterable<LibraryEntry> entries) {
       rows.add([...base, '', '', '']);
     } else {
       for (final watch in entry.watches) {
-        rows.add([...base, _date(watch.watchedAt), watch.rating?.name ?? '', watch.note ?? '']);
+        rows.add([...base, watch.dateKnown ? _date(watch.watchedAt) : '', watch.rating?.name ?? '', watch.note ?? '']);
       }
     }
   }
@@ -47,7 +47,12 @@ String libraryToJson(Iterable<LibraryEntry> entries, {required DateTime exported
           'addedAt': e.addedAt.toUtc().toIso8601String(),
           'watches': [
             for (final w in e.watches)
-              {'watchedAt': w.watchedAt.toUtc().toIso8601String(), 'rating': w.rating?.name, 'note': w.note},
+              {
+                'watchedAt': w.watchedAt.toUtc().toIso8601String(),
+                if (!w.dateKnown) 'dateUnknown': true,
+                'rating': w.rating?.name,
+                'note': w.note,
+              },
           ],
         },
     ],
