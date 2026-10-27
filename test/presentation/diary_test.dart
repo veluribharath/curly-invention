@@ -6,6 +6,7 @@ import 'package:reel/domain/entities/library_entry.dart';
 import 'package:reel/domain/entities/media_type.dart';
 import 'package:reel/main.dart';
 import 'package:reel/presentation/screens/diary_screen.dart';
+import 'package:reel/presentation/screens/rate_titles_screen.dart';
 import 'package:reel/presentation/widgets/title_tile.dart';
 
 import '../support/fakes.dart';
@@ -60,23 +61,38 @@ void main() {
     );
   });
 
-  testWidgets('Add offers the setup swipe deck, which adds to the library', (tester) async {
+  testWidgets('Add opens the list of titles to rate, which adds to the library', (tester) async {
     final library = MemoryLibraryRepository();
     await openLibrary(tester, library);
 
     await tester.tap(find.text('Add'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Swipe through popular titles'));
+    await tester.tap(find.text('Rate popular titles'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Want to watch'));
+
+    final tiles = find.byType(RateTile);
+    expect(tiles, findsWidgets);
+    Finder button(int tile, String label) => find.descendant(of: tiles.at(tile), matching: find.byTooltip(label));
+    await tester.tap(button(0, 'Watchlist'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Liked'));
+    await tester.tap(button(1, 'Liked'));
+    await tester.pumpAndSettle();
+    await tester.tap(button(2, 'Seen'));
     await tester.pumpAndSettle();
 
     final entries = library.entries.values.toList();
     expect(entries.where((e) => e.onWatchlist), hasLength(1));
-    final watched = entries.singleWhere((e) => e.watched);
-    expect(watched.watches.single.rating, Rating.liked);
-    expect(watched.watches.single.dateKnown, isFalse);
+    final liked = entries.singleWhere((e) => e.latestRating == Rating.liked);
+    expect(liked.watches.single.dateKnown, isFalse);
+    expect(entries.where((e) => e.watched), hasLength(2));
+
+    // Changing your mind: Loved replaces Liked, and Seen again takes it back.
+    await tester.tap(button(1, 'Loved'));
+    await tester.pumpAndSettle();
+    expect(library.entries[liked.id]!.latestRating, Rating.loved);
+    expect(library.entries[liked.id]!.watches, hasLength(1));
+    await tester.tap(button(2, 'Seen'));
+    await tester.pumpAndSettle();
+    expect(library.entries.values.where((e) => e.watched), hasLength(1));
   });
 }

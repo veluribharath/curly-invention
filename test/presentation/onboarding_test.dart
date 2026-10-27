@@ -124,11 +124,11 @@ void main() {
     expect(find.textContaining('Not rated yet'), findsOneWidget);
     await tester.tap(find.text('Your taste'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Liked'));
+    await tester.tap(find.byTooltip('Liked').first);
     await tester.pumpAndSettle();
     expect(library.entries.values.single.latestRating, Rating.liked);
     await tester.pageBack();
     await tester.pumpAndSettle();
-    expect(find.text('1 title rated. Swipe more any time.'), findsOneWidget);
+    expect(find.text('1 title rated. Rate more any time.'), findsOneWidget);
   });
 }
