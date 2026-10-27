@@ -1,4 +1,3 @@
-import 'package:reel/domain/entities/library_entry.dart';
 import 'package:reel/domain/entities/media_title.dart';
 import 'package:reel/domain/entities/media_type.dart';
 import 'package:reel/domain/repositories/catalog_repository.dart';
