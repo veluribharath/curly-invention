@@ -102,8 +102,8 @@ class LibraryScreen extends ConsumerWidget {
   }
 }
 
-/// Ways to add to your library: find a title, or swipe through well-known
-/// ones as in setup.
+/// Ways to add to your library: find a title, or rate well-known ones from
+/// an endless list.
 Future<void> showAddToLibrarySheet(BuildContext context) {
   return showModalBottomSheet<void>(
     context: context,
@@ -123,8 +123,8 @@ Future<void> showAddToLibrarySheet(BuildContext context) {
           ),
           ListTile(
             leading: const Icon(Icons.swipe),
-            title: const Text('Swipe through popular titles'),
-            subtitle: const Text("Mark what you've seen and what you want to watch"),
+            title: const Text('Rate popular titles'),
+            subtitle: const Text("An endless list: mark what you've seen, rate it, or save it for later"),
             onTap: () {
               Navigator.pop(sheet);
               context.push('/library/rate');

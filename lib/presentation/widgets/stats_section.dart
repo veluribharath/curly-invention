@@ -60,7 +60,7 @@ class StatsSection extends ConsumerWidget {
           Align(
             alignment: Alignment.centerLeft,
             child: TextButton.icon(
-              icon: const Icon(Icons.swipe),
+              icon: const Icon(Icons.thumbs_up_down_outlined),
               label: const Text('Rate more titles'),
               onPressed: () => context.push('/you/rate'),
             ),

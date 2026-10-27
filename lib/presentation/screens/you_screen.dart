@@ -67,12 +67,12 @@ class YouScreen extends ConsumerWidget {
             onChanged: settings == null ? null : ref.read(settingsActionsProvider).setIncludeFree,
           ),
           ListTile(
-            leading: const Icon(Icons.swipe),
+            leading: const Icon(Icons.thumbs_up_down_outlined),
             title: const Text('Your taste'),
             subtitle: Text(
               rated == 0
-                  ? 'Not rated yet. Swipe a few titles you know to tune Discover.'
-                  : '$rated ${rated == 1 ? 'title' : 'titles'} rated. Swipe more any time.',
+                  ? 'Not rated yet. Rate titles you know to tune Discover.'
+                  : '$rated ${rated == 1 ? 'title' : 'titles'} rated. Rate more any time.',
             ),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/you/rate'),

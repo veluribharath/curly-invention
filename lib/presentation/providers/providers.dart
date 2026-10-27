@@ -124,6 +124,20 @@ class LibraryActions {
 
   Future<void> removeWatch(MediaTitle title, int index) => _save(_entryFor(title).removeWatch(index, now: _now));
 
+  /// One tap from a list: marks [title] seen at some point (no date) with
+  /// [rating], or changes the rating of its latest watch if already seen.
+  Future<void> rateSeen(MediaTitle title, Rating? rating) {
+    final entry = _entryFor(title);
+    if (!entry.watched) return logWatch(title, WatchEvent(watchedAt: _now, rating: rating, dateKnown: false));
+    final last = entry.watches.length - 1;
+    final watch = entry.watches[last];
+    return editWatch(
+      title,
+      last,
+      WatchEvent(watchedAt: watch.watchedAt, rating: rating, note: watch.note, dateKnown: watch.dateKnown),
+    );
+  }
+
   /// Favorites are watched titles; favoriting an unwatched one logs a watch.
   Future<void> setFavorite(MediaTitle title, bool favorite) {
     var entry = _entryFor(title);
