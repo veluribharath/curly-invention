@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:reel/presentation/providers/providers.dart';
+import 'package:reel/presentation/widgets/design_kit.dart';
 
 /// Credits the data sources as their terms require, and licenses.
 class AboutScreen extends ConsumerWidget {
@@ -24,7 +25,7 @@ class AboutScreen extends ConsumerWidget {
           const SizedBox(height: 4),
           const Text('A personal movie and series tracker. Free, no ads, no social features.'),
           const SizedBox(height: 24),
-          Text('Movie and series data', style: textTheme.titleMedium),
+          const SectionHeader('Movie and series data'),
           const SizedBox(height: 8),
           Row(
             children: [
@@ -44,12 +45,12 @@ class AboutScreen extends ConsumerWidget {
           ),
           TextButton(onPressed: () => open('https://www.themoviedb.org'), child: const Text('themoviedb.org')),
           const SizedBox(height: 16),
-          Text('Where to watch', style: textTheme.titleMedium),
+          const SectionHeader('Where to watch'),
           const SizedBox(height: 8),
           Text('$availability. Availability changes often and may be out of date.'),
           TextButton(onPressed: () => open('https://www.justwatch.com'), child: const Text('justwatch.com')),
           const SizedBox(height: 16),
-          Text('Trailers', style: textTheme.titleMedium),
+          const SectionHeader('Trailers'),
           const SizedBox(height: 8),
           const Text('Trailers play through YouTube and are subject to YouTube\'s terms.'),
           const SizedBox(height: 24),

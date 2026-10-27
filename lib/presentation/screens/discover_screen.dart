@@ -5,14 +5,19 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:reel/core/theme/app_design.dart';
+import 'package:reel/core/theme/app_theme.dart';
+import 'package:reel/core/theme/reel_style.dart';
 import 'package:reel/domain/entities/feed_signal.dart';
 import 'package:reel/domain/entities/media_type.dart';
 import 'package:reel/domain/entities/streaming.dart';
 import 'package:reel/domain/usecases/discover_feed.dart';
 import 'package:reel/domain/usecases/query_library.dart';
+import 'package:reel/presentation/providers/account_providers.dart';
 import 'package:reel/presentation/providers/discover_providers.dart';
 import 'package:reel/presentation/providers/providers.dart';
 import 'package:reel/presentation/widgets/async_states.dart';
+import 'package:reel/presentation/widgets/design_kit.dart';
 import 'package:reel/presentation/widgets/library_actions.dart';
 import 'package:reel/presentation/widgets/log_watch_sheet.dart';
 import 'package:reel/presentation/widgets/poster_image.dart';
@@ -81,8 +86,9 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
       if (next.cards.isEmpty && (previous?.cards.isNotEmpty ?? false)) _resetPosition();
     });
     final current = _current < feed.cards.length ? feed.cards[_current] : null;
+    final design = ref.watch(appDesignProvider);
 
-    return Scaffold(
+    final screen = Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
         fit: StackFit.expand,
@@ -91,24 +97,19 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
           // video.
           if (current != null)
             AnimatedSwitcher(
-              duration: const Duration(milliseconds: 400),
+              duration: design == AppDesign.classic ? const Duration(milliseconds: 400) : context.reel.motion,
               child: ImageFiltered(
                 key: ValueKey(current.id),
                 imageFilter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
                 child: BackdropImage(path: current.title.backdropPath ?? current.title.posterPath),
               ),
             ),
-          const DecoratedBox(
+          DecoratedBox(
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Color(0xCC000000), Color(0x99000000), Color(0xEE000000)],
-              ),
+              gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: _scrim(design)),
             ),
           ),
           SafeArea(
-            bottom: false,
             child: Column(
               children: [
                 _FilterBar(filter: filter),
@@ -119,7 +120,17 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
         ],
       ),
     );
+    // Discover is a dark room in every design; Classic keeps its old mix.
+    return design == AppDesign.classic ? screen : Theme(data: AppTheme.dark(design), child: screen);
   }
+
+  /// Darkens the blurred backdrop so text reads over it.
+  static List<Color> _scrim(AppDesign design) => switch (design) {
+    AppDesign.classic => const [Color(0xCC000000), Color(0x99000000), Color(0xEE000000)],
+    AppDesign.marquee => const [Color(0xF00B0A08), Color(0xB30B0A08), Color(0xFA0B0A08)],
+    AppDesign.aura => const [Color(0x99000000), Color(0x66000000), Color(0xE6000000)],
+    AppDesign.pop => const [Color(0xE6130E22), Color(0xA62A1458), Color(0xF5130E22)],
+  };
 
   Widget _body(DiscoverState feed) {
     final filter = ref.read(discoverFilterProvider);
@@ -263,6 +274,7 @@ class ReelCard extends ConsumerWidget {
     final override = ref.watch(clipOverrideProvider(card.id)).value;
     final textTheme = Theme.of(context).textTheme;
     final onWatchlist = entry?.onWatchlist ?? false;
+    final design = context.reel.design;
 
     return LayoutBuilder(
       builder: (context, constraints) => SingleChildScrollView(
@@ -282,14 +294,18 @@ class ReelCard extends ConsumerWidget {
                   clipOverride: override,
                   onClipWatched: () => signals.record(card.id, FeedSignalType.watchedClip),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: design == AppDesign.classic ? 16 : 20),
+                if (design == AppDesign.marquee) ...[
+                  Eyebrow(titleMetaLine(title, withRating: false), color: Colors.white70),
+                  const SizedBox(height: 6),
+                ],
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
                       child: Text(
                         title.name,
-                        style: textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800, color: Colors.white),
+                        style: _titleStyle(textTheme, design),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -305,17 +321,15 @@ class ReelCard extends ConsumerWidget {
                     ),
                   ],
                 ),
-                Text(titleMetaLine(title), style: textTheme.bodyMedium?.copyWith(color: Colors.white70)),
+                if (design != AppDesign.marquee)
+                  Text(titleMetaLine(title), style: textTheme.bodyMedium?.copyWith(color: Colors.white70)),
                 if (title.genres.isNotEmpty)
-                  Text(title.genres.take(3).join(' · '), style: textTheme.bodyMedium?.copyWith(color: Colors.white70)),
-                const SizedBox(height: 6),
-                Text(
-                  card.reason,
-                  style: textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.primary,
-                    fontStyle: FontStyle.italic,
+                  Text(
+                    title.genres.take(3).join(design == AppDesign.marquee ? '  /  ' : ' · '),
+                    style: textTheme.bodyMedium?.copyWith(color: Colors.white70),
                   ),
-                ),
+                SizedBox(height: design == AppDesign.classic ? 6 : 10),
+                _Reason(text: card.reason),
                 const SizedBox(height: 10),
                 if (mine.isNotEmpty)
                   ServiceLogoRow(offers: mine, size: 30)
@@ -392,16 +406,13 @@ class ReelCard extends ConsumerWidget {
                 ),
                 const SizedBox(height: 12),
                 if (openable != null)
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      icon: const Icon(Icons.play_arrow),
-                      label: Text('Open in ${openable.service.name}'),
-                      onPressed: () {
-                        signals.record(card.id, FeedSignalType.openedService);
-                        openOffer(context, title, openable, fallback: availability?.link);
-                      },
-                    ),
+                  HeroButton(
+                    icon: const Icon(Icons.play_arrow),
+                    label: 'Open in ${openable.service.name}',
+                    onPressed: () {
+                      signals.record(card.id, FeedSignalType.openedService);
+                      openOffer(context, title, openable, fallback: availability?.link);
+                    },
                   ),
               ],
             ),
@@ -409,6 +420,97 @@ class ReelCard extends ConsumerWidget {
         ),
       ),
     );
+  }
+}
+
+TextStyle? _titleStyle(TextTheme textTheme, AppDesign design) => switch (design) {
+  AppDesign.classic => textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800, color: Colors.white),
+  AppDesign.marquee => textTheme.headlineLarge?.copyWith(color: Colors.white, height: 1.05),
+  AppDesign.aura => textTheme.headlineMedium?.copyWith(color: Colors.white, height: 1.1),
+  AppDesign.pop => textTheme.headlineLarge?.copyWith(color: Colors.white, height: 0.95),
+};
+
+/// Why the feed picked this title: an italic aside (Classic), a serif
+/// whisper in gold (Marquee), a frosted pill (Aura), a tilted sticker (Pop).
+class _Reason extends StatelessWidget {
+  final String text;
+
+  const _Reason({required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final reel = context.reel;
+    final style = theme.textTheme.bodyMedium;
+    switch (reel.design) {
+      case AppDesign.classic:
+        return Text(
+          text,
+          style: style?.copyWith(color: theme.colorScheme.primary, fontStyle: FontStyle.italic),
+        );
+      case AppDesign.marquee:
+        return Text(
+          text,
+          style: style?.copyWith(
+            fontFamily: 'Fraunces',
+            fontStyle: FontStyle.italic,
+            fontWeight: FontWeight.w500,
+            fontSize: 16,
+            color: theme.colorScheme.primary,
+          ),
+        );
+      case AppDesign.aura:
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(99),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.14),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.18), width: 0.6),
+                borderRadius: BorderRadius.circular(99),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(10, 6, 14, 6),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.auto_awesome, size: 15, color: Colors.white),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        text,
+                        style: style?.copyWith(color: Colors.white, fontWeight: FontWeight.w600),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      case AppDesign.pop:
+        return Transform.rotate(
+          angle: -0.025,
+          alignment: Alignment.centerLeft,
+          child: DecoratedBox(
+            decoration: reel
+                .surface(color: reel.highlight, radius: 10)
+                .copyWith(border: Border.all(color: const Color(0xFF17112A), width: 2)),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              child: Text(
+                text,
+                style: style?.copyWith(color: reel.onHighlight, fontWeight: FontWeight.w700),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
+        );
+    }
   }
 }
 
@@ -422,22 +524,119 @@ class _ReelAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? Theme.of(context).colorScheme.primary : Colors.white;
-    return Expanded(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Column(
-            children: [
-              Icon(icon, color: color),
-              const SizedBox(height: 4),
-              Text(label, style: Theme.of(context).textTheme.labelSmall?.copyWith(color: color)),
-            ],
+    final theme = Theme.of(context);
+    final reel = context.reel;
+    final labelStyle = theme.textTheme.labelSmall;
+    final scheme = theme.colorScheme;
+    switch (reel.design) {
+      case AppDesign.classic:
+        final color = selected ? scheme.primary : Colors.white;
+        return Expanded(
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Column(
+                children: [
+                  Icon(icon, color: color),
+                  const SizedBox(height: 4),
+                  Text(label, style: labelStyle?.copyWith(color: color)),
+                ],
+              ),
+            ),
           ),
-        ),
-      ),
-    );
+        );
+      case AppDesign.marquee:
+        final color = selected ? scheme.primary : Colors.white;
+        return Expanded(
+          child: InkWell(
+            onTap: onTap,
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              decoration: BoxDecoration(
+                border: Border(
+                  top: BorderSide(color: selected ? scheme.primary : Colors.white24, width: selected ? 1.6 : 0.8),
+                ),
+              ),
+              child: Column(
+                children: [
+                  Icon(icon, color: color, size: 22),
+                  const SizedBox(height: 6),
+                  Text(label, style: labelStyle?.copyWith(color: color, fontSize: 10, letterSpacing: 1.4)),
+                ],
+              ),
+            ),
+          ),
+        );
+      case AppDesign.aura:
+        return Expanded(
+          child: PressScale(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: onTap,
+              child: Column(
+                children: [
+                  ClipOval(
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                      child: AnimatedContainer(
+                        duration: reel.motion,
+                        curve: reel.curve,
+                        width: 52,
+                        height: 52,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: selected ? Colors.white : Colors.white.withValues(alpha: 0.14),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.2), width: 0.6),
+                        ),
+                        child: Icon(icon, color: selected ? Colors.black : Colors.white),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(label, style: labelStyle?.copyWith(color: Colors.white)),
+                ],
+              ),
+            ),
+          ),
+        );
+      case AppDesign.pop:
+        const ink = Color(0xFF17112A);
+        return Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: PressScale(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onTap,
+                child: AnimatedContainer(
+                  duration: reel.motion,
+                  curve: Curves.easeOut,
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  decoration: BoxDecoration(
+                    color: selected ? reel.highlight : scheme.surfaceContainer,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: reel.borderColor, width: 2),
+                    boxShadow: [BoxShadow(color: reel.hardShadowColor, offset: const Offset(3, 3))],
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(icon, color: selected ? ink : Colors.white),
+                      const SizedBox(height: 4),
+                      Text(
+                        label,
+                        style: labelStyle?.copyWith(color: selected ? ink : Colors.white),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+    }
   }
 }

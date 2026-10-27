@@ -116,7 +116,7 @@ void main() {
     expect(find.text('Country'), findsOneWidget);
     expect(find.text('My services'), findsOneWidget);
 
-    await tester.scrollUntilVisible(find.text('Your taste'), 200);
+    await tester.scrollUntilVisible(find.text('Your taste'), 200, scrollable: find.byType(Scrollable).first);
     await tester.tap(find.widgetWithText(SwitchListTile, 'Also show free with ads'));
     await tester.pumpAndSettle();
     expect(settings.settings!.includeFreeWithAds, isTrue);

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:reel/presentation/widgets/design_kit.dart';
+
 /// Loading spinner, error with retry, or [data].
 class AsyncBody<T> extends StatelessWidget {
   final AsyncValue<T> value;
@@ -33,8 +35,8 @@ class ErrorMessage extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.cloud_off, size: 40, color: Theme.of(context).colorScheme.outline),
-            const SizedBox(height: 12),
+            const IconBadge(icon: Icons.cloud_off, size: 40),
+            const SizedBox(height: 16),
             Text(message, textAlign: TextAlign.center),
             if (onRetry != null) ...[
               const SizedBox(height: 12),
@@ -62,8 +64,8 @@ class EmptyMessage extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 48, color: Theme.of(context).colorScheme.outline),
-            const SizedBox(height: 12),
+            IconBadge(icon: icon),
+            const SizedBox(height: 16),
             Text(message, textAlign: TextAlign.center),
             if (action != null) ...[const SizedBox(height: 12), action!],
           ],

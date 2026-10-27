@@ -9,6 +9,7 @@ import 'package:reel/presentation/providers/recent_searches.dart';
 import 'package:reel/presentation/widgets/async_states.dart';
 import 'package:reel/presentation/widgets/library_actions.dart';
 import 'package:reel/presentation/widgets/title_tile.dart';
+import 'package:reel/presentation/widgets/design_kit.dart';
 
 /// Search movies and series together. Recent searches and trending titles
 /// show while the field is empty.
@@ -123,7 +124,6 @@ class _EmptySearch extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final recent = ref.watch(recentSearchesProvider);
     final trending = ref.watch(trendingProvider);
-    final textTheme = Theme.of(context).textTheme;
     return ListView(
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       children: [
@@ -132,7 +132,7 @@ class _EmptySearch extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(16, 8, 8, 0),
             child: Row(
               children: [
-                Expanded(child: Text('Recent', style: textTheme.titleMedium)),
+                Expanded(child: const SectionHeader('Recent')),
                 TextButton(
                   onPressed: () => ref.read(recentSearchesProvider.notifier).clear(),
                   child: const Text('Clear'),
@@ -148,10 +148,7 @@ class _EmptySearch extends ConsumerWidget {
             ),
           ),
         ],
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-          child: Text('Trending this week', style: textTheme.titleMedium),
-        ),
+        Padding(padding: const EdgeInsets.fromLTRB(16, 16, 16, 4), child: const SectionHeader('Trending this week')),
         ...switch (trending) {
           AsyncData(:final value) => [for (final title in value) TitleTile(title: title)],
           AsyncError() => [

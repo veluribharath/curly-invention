@@ -140,7 +140,7 @@ class RateTile extends ConsumerWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            PosterImage(title: title, width: 72, radius: 6, size: 'w185'),
+            PosterImage(title: title, width: 72, compact: true, size: 'w185'),
             const SizedBox(width: 12),
             Expanded(
               child: Column(

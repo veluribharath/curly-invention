@@ -15,6 +15,10 @@ class AppConfig {
   /// is kept on the device only.
   static const bool useFirebase = bool.fromEnvironment('USE_FIREBASE');
 
+  /// The design the app starts with until one is picked on the You tab:
+  /// classic, marquee, aura or pop. Empty means classic.
+  static const String design = String.fromEnvironment('REEL_DESIGN');
+
   static const String _firebaseApiKey = String.fromEnvironment('FIREBASE_API_KEY');
   static const String _firebaseAppId = String.fromEnvironment('FIREBASE_APP_ID');
   static const String _firebaseMessagingSenderId = String.fromEnvironment('FIREBASE_MESSAGING_SENDER_ID');

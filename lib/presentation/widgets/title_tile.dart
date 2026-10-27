@@ -23,7 +23,7 @@ class TitleTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Row(
           children: [
-            PosterImage(title: title, width: 56, radius: 6, size: 'w185'),
+            PosterImage(title: title, width: 56, compact: true, size: 'w185'),
             const SizedBox(width: 12),
             Expanded(
               child: Column(

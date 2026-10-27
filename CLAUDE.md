@@ -11,6 +11,8 @@ Clean Architecture, package `reel`:
 - `lib/data/`: TMDB client and mapper, mock catalog, local and Firestore repositories, `AuthService`.
 - `lib/presentation/`: Riverpod providers (`providers/`), go_router (`router/app_router.dart`, a `StatefulShellRoute` with Discover, Search, Library, You), screens and widgets.
 
+Look: three design drafts (Marquee, Aura, Pop) plus Classic, switched on the You tab or with `--dart-define=REEL_DESIGN=…`; see `docs/designs/README.md`. Themes are in `lib/core/theme/designs/`, extra tokens in `ReelStyle` (`context.reel`), and per-design pieces in `widgets/design_kit.dart`. Style new UI through the theme, `context.reel` and the design kit, not hard-coded colors, corners or fonts, and check it in each design (`test/presentation/designs_test.dart` renders every tab in every design).
+
 Availability is behind `AvailabilityRepository` (TMDB watch providers first), so another source can replace it.
 
 ## Conventions
