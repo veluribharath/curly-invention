@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:reel/core/config/app_config.dart';
+import 'package:reel/core/theme/app_design.dart';
 import 'package:reel/data/repositories/firestore_library_repository.dart';
 import 'package:reel/data/services/auth_service.dart';
 import 'package:reel/presentation/providers/discover_providers.dart';
@@ -32,6 +34,36 @@ class ThemeModeSetting extends Notifier<ThemeMode> {
 }
 
 final themeModeProvider = NotifierProvider<ThemeModeSetting, ThemeMode>(ThemeModeSetting.new);
+
+/// Which design direction the app wears, kept on the device. Starts on the
+/// `REEL_DESIGN` dart-define, or Classic.
+class AppDesignSetting extends Notifier<AppDesign> {
+  static const _key = 'appDesign';
+
+  /// Overrides the starting design and skips the saved one, for tests.
+  final AppDesign? initial;
+
+  AppDesignSetting({this.initial});
+
+  @override
+  AppDesign build() {
+    if (initial != null) return initial!;
+    _load();
+    return AppDesign.tryParse(AppConfig.design) ?? AppDesign.classic;
+  }
+
+  Future<void> _load() async {
+    final saved = AppDesign.tryParse((await SharedPreferences.getInstance()).getString(_key));
+    if (saved != null && ref.mounted) state = saved;
+  }
+
+  Future<void> set(AppDesign design) async {
+    state = design;
+    await (await SharedPreferences.getInstance()).setString(_key, design.name);
+  }
+}
+
+final appDesignProvider = NotifierProvider<AppDesignSetting, AppDesign>(AppDesignSetting.new);
 
 /// What the account section shows.
 class AccountState {

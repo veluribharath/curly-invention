@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 
+import 'package:reel/core/theme/reel_style.dart';
 import 'package:reel/data/repositories/clip_override_repository.dart';
 import 'package:reel/domain/entities/media_title.dart';
 import 'package:reel/domain/entities/media_type.dart';
@@ -180,20 +181,39 @@ class _ReelClipPlayerState extends ConsumerState<ReelClipPlayer> {
   @override
   Widget build(BuildContext context) {
     final controller = _controller;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(14),
-      child: AspectRatio(
-        aspectRatio: 16 / 9,
-        child: controller != null && !_failed
-            ? InlineYoutubeView(controller: controller, interactive: false)
-            : _Still(
-                title: widget.title,
-                // No pan without a web view (widget tests) or with reduced
-                // motion.
-                animate:
-                    widget.live && ref.watch(videoEmbedsEnabledProvider) && !MediaQuery.disableAnimationsOf(context),
-                videoKey: _failed ? null : _candidates.firstOrNull?.key,
-              ),
+    final reel = context.reel;
+    final radius = BorderRadius.circular(reel.clipRadius);
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: radius,
+        boxShadow: [
+          if (reel.hardShadow != Offset.zero) BoxShadow(color: reel.hardShadowColor, offset: reel.hardShadow),
+          ...reel.softShadow,
+        ],
+      ),
+      // An outline drawn beside the player, never over it.
+      padding: EdgeInsets.all(reel.borderWidth),
+      foregroundDecoration: reel.borderWidth == 0
+          ? null
+          : BoxDecoration(
+              borderRadius: radius,
+              border: Border.all(color: reel.borderColor, width: reel.borderWidth),
+            ),
+      child: ClipRRect(
+        borderRadius: radius,
+        child: AspectRatio(
+          aspectRatio: 16 / 9,
+          child: controller != null && !_failed
+              ? InlineYoutubeView(controller: controller, interactive: false)
+              : _Still(
+                  title: widget.title,
+                  // No pan without a web view (widget tests) or with reduced
+                  // motion.
+                  animate:
+                      widget.live && ref.watch(videoEmbedsEnabledProvider) && !MediaQuery.disableAnimationsOf(context),
+                  videoKey: _failed ? null : _candidates.firstOrNull?.key,
+                ),
+        ),
       ),
     );
   }

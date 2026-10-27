@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 
+import 'package:reel/core/theme/app_design.dart';
+import 'package:reel/core/theme/reel_style.dart';
 import 'package:reel/domain/entities/library_entry.dart';
 import 'package:reel/domain/entities/media_title.dart';
 import 'package:reel/domain/entities/media_type.dart';
@@ -12,6 +14,7 @@ import 'package:reel/domain/usecases/build_title_share.dart';
 import 'package:reel/domain/usecases/pick_video.dart';
 import 'package:reel/presentation/providers/providers.dart';
 import 'package:reel/presentation/widgets/async_states.dart';
+import 'package:reel/presentation/widgets/design_kit.dart';
 import 'package:reel/presentation/widgets/inline_youtube_view.dart';
 import 'package:reel/presentation/widgets/library_actions.dart';
 import 'package:reel/presentation/widgets/log_watch_sheet.dart';
@@ -45,12 +48,13 @@ class TitleDetailsScreen extends ConsumerWidget {
       );
     }
 
+    final design = context.reel.design;
     return Scaffold(
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
             pinned: true,
-            expandedHeight: title.backdropPath == null ? null : 220,
+            expandedHeight: title.backdropPath == null ? null : _backdropHeight(design),
             actions: [
               IconButton(tooltip: 'Share', icon: const Icon(Icons.share), onPressed: () => _share(context, title)),
             ],
@@ -95,7 +99,15 @@ class TitleDetailsScreen extends ConsumerWidget {
             SliverToBoxAdapter(child: _Trailer(title: full)),
             if (full.overview.isNotEmpty)
               SliverToBoxAdapter(
-                child: Padding(padding: const EdgeInsets.fromLTRB(16, 16, 16, 0), child: Text(full.overview)),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  child: Text(
+                    full.overview,
+                    style: design == AppDesign.marquee
+                        ? Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.6)
+                        : null,
+                  ),
+                ),
               ),
             SliverToBoxAdapter(child: WhereToWatch(title: full)),
             SliverToBoxAdapter(child: _People(title: full)),
@@ -106,6 +118,13 @@ class TitleDetailsScreen extends ConsumerWidget {
       ),
     );
   }
+
+  static double _backdropHeight(AppDesign design) => switch (design) {
+    AppDesign.classic => 220,
+    AppDesign.marquee => 300,
+    AppDesign.aura => 260,
+    AppDesign.pop => 240,
+  };
 
   Future<void> _share(BuildContext context, MediaTitle title) async {
     final share = buildTitleShare(id: title.id, name: title.name, year: title.year);
@@ -129,6 +148,144 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final scheme = Theme.of(context).colorScheme;
+    final reel = context.reel;
+    switch (reel.design) {
+      case AppDesign.classic:
+        break;
+      // A program note: credits caption, serif title, genres in gold.
+      case AppDesign.marquee:
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              PosterImage(title: title, width: 112),
+              const SizedBox(width: 18),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Eyebrow(titleMetaLine(title, withRating: false)),
+                    const SizedBox(height: 8),
+                    Text(title.name, style: textTheme.headlineMedium?.copyWith(height: 1.08)),
+                    if (title.voteAverage != null && title.voteAverage! > 0) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        '★ ${title.voteAverage!.toStringAsFixed(1)}',
+                        style: textTheme.titleSmall?.copyWith(color: scheme.primary),
+                      ),
+                    ],
+                    if (title.genres.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        title.genres.join('  /  '),
+                        style: textTheme.bodySmall?.copyWith(
+                          fontFamily: 'Fraunces',
+                          fontStyle: FontStyle.italic,
+                          fontWeight: FontWeight.w500,
+                          fontSize: 14,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      // Centered and quiet: a floating poster over the backdrop.
+      case AppDesign.aura:
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+          child: Column(
+            children: [
+              PosterImage(title: title, width: 150),
+              const SizedBox(height: 20),
+              Column(
+                children: [
+                  Text(title.name, textAlign: TextAlign.center, style: textTheme.headlineMedium),
+                  const SizedBox(height: 6),
+                  Text(
+                    titleMetaLine(title),
+                    textAlign: TextAlign.center,
+                    style: textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+                  ),
+                  if (title.genres.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        for (final genre in title.genres)
+                          Chip(label: Text(genre), visualDensity: VisualDensity.compact),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ),
+        );
+      // Big type and a sticker per genre.
+      case AppDesign.pop:
+        final stickers = [reel.highlight, scheme.secondary, scheme.tertiary, scheme.primaryContainer];
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Transform.rotate(angle: -0.04, child: PosterImage(title: title, width: 110)),
+                  const SizedBox(width: 18),
+                  Expanded(
+                    child: Text(
+                      titleMetaLine(title),
+                      style: textTheme.titleSmall?.copyWith(color: scheme.onSurfaceVariant),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Text(title.name, style: textTheme.displaySmall?.copyWith(height: 0.98)),
+              if (title.genres.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final (i, genre) in title.genres.indexed)
+                      Transform.rotate(
+                        angle: i.isEven ? -0.03 : 0.03,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                          decoration: reel
+                              .surface(color: stickers[i % stickers.length], radius: 99)
+                              .copyWith(
+                                boxShadow: [BoxShadow(color: reel.hardShadowColor, offset: const Offset(2, 2))],
+                              ),
+                          child: Text(
+                            genre,
+                            style: textTheme.labelLarge?.copyWith(
+                              color:
+                                  ThemeData.estimateBrightnessForColor(stickers[i % stickers.length]) == Brightness.dark
+                                  ? Colors.white
+                                  : const Color(0xFF17112A),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        );
+    }
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
       child: Row(
@@ -319,7 +476,6 @@ class _People extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!title.hasCredits) return const SizedBox.shrink();
-    final textTheme = Theme.of(context).textTheme;
     final makers = title.type == MediaType.movie ? 'Directed by' : 'Created by';
     Widget chips(List<Person> people) => Wrap(
       spacing: 8,
@@ -338,16 +494,12 @@ class _People extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (title.directors.isNotEmpty) ...[
-            Text(makers, style: textTheme.titleMedium),
+            SectionHeader(makers),
             const SizedBox(height: 6),
             chips(title.directors),
             const SizedBox(height: 12),
           ],
-          if (title.cast.isNotEmpty) ...[
-            Text('Cast', style: textTheme.titleMedium),
-            const SizedBox(height: 6),
-            chips(title.cast),
-          ],
+          if (title.cast.isNotEmpty) ...[const SectionHeader('Cast'), const SizedBox(height: 6), chips(title.cast)],
         ],
       ),
     );
@@ -382,13 +534,10 @@ class TitleRow extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text(label, style: Theme.of(context).textTheme.titleMedium),
-        ),
+        Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: SectionHeader(label)),
         const SizedBox(height: 8),
         SizedBox(
-          height: 190,
+          height: 196,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -403,7 +552,7 @@ class TitleRow extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      PosterImage(title: title, width: 100, size: 'w185'),
+                      PosterImage(title: title, width: 100, size: 'w185', compact: true),
                       const SizedBox(height: 4),
                       Text(
                         title.name,

@@ -1,37 +1,72 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
+import 'package:reel/core/theme/reel_style.dart';
 import 'package:reel/core/tmdb_images.dart';
 import 'package:reel/domain/entities/media_title.dart';
 
 /// A title's poster at 2:3, or its name on a tinted card when there's none.
+/// Corners, outline and shadow follow the design.
 class PosterImage extends StatelessWidget {
   final MediaTitle title;
   final double? width;
-  final double radius;
+
+  /// Corner radius; the design's when null.
+  final double? radius;
+
+  /// Smaller corners and shadow, for list rows.
+  final bool compact;
   final String size;
 
-  const PosterImage({super.key, required this.title, this.width, this.radius = 8, this.size = 'w342'});
+  const PosterImage({
+    super.key,
+    required this.title,
+    this.width,
+    this.radius,
+    this.compact = false,
+    this.size = 'w342',
+  });
 
   @override
   Widget build(BuildContext context) {
+    final reel = context.reel;
     final url = TmdbImages.poster(title.posterPath, size: size);
     final fallback = _NamedPlaceholder(name: title.name);
+    final r = radius ?? reel.posterRadius * (compact ? 0.75 : 1);
+    final framed = radius != 0;
     return SizedBox(
       width: width,
       child: AspectRatio(
         aspectRatio: 2 / 3,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(radius),
-          child: url == null
-              ? fallback
-              : CachedNetworkImage(
-                  imageUrl: url,
-                  fit: BoxFit.cover,
-                  fadeInDuration: const Duration(milliseconds: 150),
-                  placeholder: (_, _) => fallback,
-                  errorWidget: (_, _, _) => fallback,
+        child: Container(
+          decoration: !framed
+              ? null
+              : BoxDecoration(
+                  borderRadius: BorderRadius.circular(r),
+                  boxShadow: [
+                    if (reel.hardShadow != Offset.zero)
+                      BoxShadow(color: reel.hardShadowColor, offset: reel.hardShadow * (compact ? 0.6 : 1)),
+                    if (!compact) ...reel.softShadow,
+                  ],
                 ),
+          foregroundDecoration: !framed || reel.borderWidth == 0
+              ? null
+              : BoxDecoration(
+                  borderRadius: BorderRadius.circular(r),
+                  border: Border.all(color: reel.borderColor, width: reel.borderWidth),
+                ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(r),
+            child: url == null
+                ? fallback
+                : CachedNetworkImage(
+                    imageUrl: url,
+                    fit: BoxFit.cover,
+                    fadeInDuration: const Duration(milliseconds: 150),
+                    placeholder: (_, _) => fallback,
+                    errorWidget: (_, _, _) => fallback,
+                  ),
+          ),
         ),
       ),
     );

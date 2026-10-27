@@ -36,11 +36,15 @@ class ReelApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final design = ref.watch(appDesignProvider);
     return MaterialApp.router(
       title: 'Reel',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
+      theme: AppTheme.light(design),
+      darkTheme: AppTheme.dark(design),
+      // Switching designs cross-fades colors, corners and type.
+      themeAnimationDuration: const Duration(milliseconds: 450),
+      themeAnimationCurve: Curves.easeInOutCubic,
       themeMode: ref.watch(themeModeProvider),
       routerConfig: ref.watch(routerProvider),
     );

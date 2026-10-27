@@ -7,6 +7,8 @@ import 'package:reel/presentation/providers/providers.dart';
 import 'package:reel/presentation/widgets/account_section.dart';
 import 'package:reel/presentation/widgets/service_logo.dart';
 import 'package:reel/presentation/widgets/stats_section.dart';
+import 'package:reel/presentation/widgets/design_kit.dart';
+import 'package:reel/presentation/widgets/design_picker.dart';
 
 /// Stats, the preferences from first-run setup (country, services, taste),
 /// account and app info.
@@ -25,17 +27,14 @@ class YouScreen extends ConsumerWidget {
       for (final s in services ?? const [])
         if (settings!.serviceIds.contains(s.providerId)) s,
     ];
-    final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
       appBar: AppBar(title: const Text('You')),
       body: ListView(
         children: [
+          const DesignPicker(),
           const StatsSection(),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-            child: Text('Preferences', style: textTheme.titleMedium),
-          ),
+          Padding(padding: const EdgeInsets.fromLTRB(16, 16, 16, 4), child: const SectionHeader('Preferences')),
           ListTile(
             leading: const Icon(Icons.public),
             title: const Text('Country'),

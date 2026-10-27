@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:reel/core/theme/app_design.dart';
+import 'package:reel/core/theme/reel_style.dart';
 import 'package:reel/domain/entities/library_entry.dart';
 import 'package:reel/domain/entities/media_type.dart';
 import 'package:reel/domain/usecases/query_library.dart';
 import 'package:reel/presentation/providers/library_view.dart';
 import 'package:reel/presentation/providers/providers.dart';
 import 'package:reel/presentation/widgets/async_states.dart';
+import 'package:reel/presentation/widgets/design_kit.dart';
 import 'package:reel/presentation/widgets/library_actions.dart';
 import 'package:reel/presentation/widgets/poster_image.dart';
 import 'package:reel/presentation/widgets/service_logo.dart';
@@ -170,27 +173,22 @@ List<Widget> libraryBanners(BuildContext context, WidgetRef ref, LibraryQuery qu
   return [
     Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-      child: Material(
+      child: ReelSurface(
         color: scheme.secondaryContainer,
-        borderRadius: BorderRadius.circular(12),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: () => ref.read(libraryViewProvider.notifier).update((q) => q.copyWith(onMyServicesOnly: true)),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            child: Row(
-              children: [
-                Icon(Icons.play_circle, color: scheme.onSecondaryContainer),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    '$count of your watchlist ${count == 1 ? 'is' : 'are'} on your services',
-                    style: TextStyle(color: scheme.onSecondaryContainer),
-                  ),
-                ),
-              ],
+        radius: context.reel.design == AppDesign.classic ? 12 : null,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        onTap: () => ref.read(libraryViewProvider.notifier).update((q) => q.copyWith(onMyServicesOnly: true)),
+        child: Row(
+          children: [
+            Icon(Icons.play_circle, color: scheme.onSecondaryContainer),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                '$count of your watchlist ${count == 1 ? 'is' : 'are'} on your services',
+                style: TextStyle(color: scheme.onSecondaryContainer),
+              ),
             ),
-          ),
+          ],
         ),
       ),
     ),
@@ -259,7 +257,7 @@ class _Grid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GridView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
+      padding: EdgeInsets.fromLTRB(16, 4, 16, 96 + MediaQuery.paddingOf(context).bottom),
       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
         maxCrossAxisExtent: 130,
         childAspectRatio: 2 / 3.7,
@@ -308,7 +306,7 @@ class _List extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final actions = ref.read(libraryActionsProvider);
     return ListView.builder(
-      padding: const EdgeInsets.only(bottom: 96),
+      padding: EdgeInsets.only(bottom: 96 + MediaQuery.paddingOf(context).bottom),
       itemCount: entries.length,
       itemBuilder: (context, index) {
         final entry = entries[index];

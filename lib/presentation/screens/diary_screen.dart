@@ -10,6 +10,7 @@ import 'package:reel/presentation/providers/providers.dart';
 import 'package:reel/presentation/widgets/async_states.dart';
 import 'package:reel/presentation/widgets/log_watch_sheet.dart';
 import 'package:reel/presentation/widgets/title_tile.dart';
+import 'package:reel/presentation/widgets/design_kit.dart';
 
 /// Everything you've watched, by date, month by month. Rewatches show
 /// again on the day you watched them.
@@ -88,7 +89,6 @@ class _DiaryList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final localizations = MaterialLocalizations.of(context);
-    final textTheme = Theme.of(context).textTheme;
     final rows = <Widget>[];
     String? month;
     for (final item in items) {
@@ -96,16 +96,14 @@ class _DiaryList extends StatelessWidget {
       final label = item.watch.dateKnown ? localizations.formatMonthYear(date) : 'Seen before, no date';
       if (label != month) {
         month = label;
-        rows.add(
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-            child: Text(label, style: textTheme.titleMedium),
-          ),
-        );
+        rows.add(Padding(padding: const EdgeInsets.fromLTRB(16, 16, 16, 4), child: SectionHeader(label)));
       }
       rows.add(_DiaryRow(item: item, day: item.watch.dateKnown ? '${date.day}' : ''));
     }
-    return ListView(padding: const EdgeInsets.only(bottom: 96), children: rows);
+    return ListView(
+      padding: EdgeInsets.only(bottom: 96 + MediaQuery.paddingOf(context).bottom),
+      children: rows,
+    );
   }
 }
 

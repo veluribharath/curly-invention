@@ -7,6 +7,7 @@ import 'package:reel/domain/entities/media_title.dart';
 import 'package:reel/domain/entities/streaming.dart';
 import 'package:reel/presentation/providers/providers.dart';
 import 'package:reel/presentation/widgets/service_logo.dart';
+import 'package:reel/presentation/widgets/design_kit.dart';
 
 /// Opens [offer] in its service: the deep link when there is one, the
 /// service's search for the title otherwise, and the JustWatch page last.
@@ -91,7 +92,7 @@ class WhereToWatch extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Where to watch', style: textTheme.titleMedium),
+          const SectionHeader('Where to watch'),
           const SizedBox(height: 8),
           body,
           Text(attribution, style: textTheme.labelSmall?.copyWith(color: Theme.of(context).colorScheme.outline)),

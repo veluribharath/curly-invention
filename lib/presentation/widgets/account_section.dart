@@ -10,6 +10,7 @@ import 'package:reel/data/services/auth_service.dart';
 import 'package:reel/domain/usecases/export_library.dart';
 import 'package:reel/presentation/providers/account_providers.dart';
 import 'package:reel/presentation/providers/providers.dart';
+import 'package:reel/presentation/widgets/design_kit.dart';
 
 /// Account, data and app tiles for the You tab.
 class AccountSection extends ConsumerWidget {
@@ -72,13 +73,10 @@ class AccountSection extends ConsumerWidget {
     final account = ref.watch(accountStateProvider);
     final actions = ref.read(accountActionsProvider);
     final themeMode = ref.watch(themeModeProvider);
-    final textTheme = Theme.of(context).textTheme;
     final appleAvailable = defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.macOS;
 
-    Widget header(String text) => Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
-      child: Text(text, style: textTheme.titleMedium),
-    );
+    Widget header(String text) =>
+        Padding(padding: const EdgeInsets.fromLTRB(16, 20, 16, 4), child: SectionHeader(text));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
